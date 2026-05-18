@@ -1,0 +1,122 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // 0. Global safety net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Phase 3: Primitives
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    // Phase 2: User lookup
+    function isAdmin() {
+      return isSignedIn() && (
+        request.auth.token.email == 'gbjuliani95@gmail.com' && 
+        request.auth.token.email_verified == true
+      );
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    // Phase 4: Entity Validation
+    function isValidExercise(data) {
+      return data.keys().hasAll(['name', 'category', 'subCategory', 'createdAt', 'uploaderId']) &&
+             data.keys().size() >= 5 && data.keys().size() <= 7 &&
+             data.name is string && data.name.size() > 0 && data.name.size() <= 100 &&
+             data.category is string && data.category.size() > 0 &&
+             data.subCategory is string && data.subCategory.size() > 0 &&
+             data.uploaderId == request.auth.uid &&
+             data.createdAt == request.time &&
+             (data.get('videoUrl', '') == '' || (data.videoUrl is string && data.videoUrl.size() <= 512)) &&
+             (data.get('description', '') == '' || (data.description is string && data.description.size() <= 1000));
+    }
+
+    function isValidUserProfile(data) {
+      return (data.get('fullName', '') == '' || (data.fullName is string && data.fullName.size() <= 100)) &&
+             (data.get('birthDate', '') == '' || (data.birthDate is string && data.birthDate.size() <= 20)) &&
+             (data.get('objective', '') == '' || (data.objective is string && data.objective.size() <= 2000));
+    }
+
+    function isValidWorkout(data, isCreate) {
+      return data.userId == request.auth.uid &&
+             data.clientName is string && data.clientName.size() <= 100 &&
+             data.type is string &&
+             data.objective is string &&
+             data.blocks is list && data.blocks.size() <= 20 &&
+             (data.get('clientId', null) == null || isValidId(data.clientId)) &&
+             (data.get('archived', false) == false || data.archived is bool) &&
+             (data.get('updatedAt', null) == null || data.updatedAt == request.time) &&
+             (!isCreate || data.createdAt == request.time);
+    }
+
+    // Rules for Exercises
+    match /exercises/{exerciseId} {
+      allow read: if true; // Public read for the exercise library
+      allow create: if isSignedIn() && (isValidExercise(request.resource.data) || isAdmin());
+      allow update: if isSignedIn() && (
+        isAdmin() || (isOwner(resource.data.uploaderId) && isValidExercise(request.resource.data))
+      );
+      allow delete: if isSignedIn() && (isOwner(resource.data.uploaderId) || isAdmin());
+    }
+
+    // Rules for History/Workouts
+    match /workouts/{workoutId} {
+      allow read: if isSignedIn() && (isOwner(resource.data.userId) || resource.data.clientId == request.auth.uid || isAdmin());
+      allow list: if isSignedIn() && (resource.data.userId == request.auth.uid || resource.data.clientId == request.auth.uid || isAdmin());
+      allow create: if isSignedIn() && (isValidWorkout(request.resource.data, true) || isAdmin());
+      allow update: if isSignedIn() && (isAdmin() || (isOwner(resource.data.userId) && isValidWorkout(request.resource.data, false)));
+      allow delete: if isSignedIn() && (isOwner(resource.data.userId) || isAdmin());
+    }
+
+    function isValidClient(data, isCreate) {
+      return data.userId == request.auth.uid &&
+             data.name is string && data.name.size() > 0 && data.name.size() <= 100 &&
+             data.status in ['Ativo', 'Inativo'] &&
+             (data.get('email', '') == '' || (data.email is string && data.email.size() <= 128)) &&
+             (data.get('phone', '') == '' || (data.phone is string && data.phone.size() <= 32)) &&
+             (!isCreate || data.createdAt == request.time);
+    }
+
+    // Rules for Clients
+    match /clients/{clientId} {
+      allow read: if isSignedIn() && (isOwner(resource.data.userId) || isAdmin());
+      allow list: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow create: if isSignedIn() && (isValidClient(request.resource.data, true) || isAdmin());
+      allow update: if isSignedIn() && (isAdmin() || (isOwner(resource.data.userId) && isValidClient(request.resource.data, false)));
+      allow delete: if isSignedIn() && (isOwner(resource.data.userId) || isAdmin());
+    }
+
+    // Rules for Finished Workouts
+    match /finished_workouts/{finishId} {
+      allow read: if isSignedIn() && (resource.data.userId == request.auth.uid || resource.data.clientId == request.auth.uid || isAdmin());
+      allow list: if isSignedIn() && (resource.data.userId == request.auth.uid || resource.data.clientId == request.auth.uid || isAdmin());
+      allow create: if isSignedIn();
+      allow delete: if isAdmin();
+    }
+
+    // Rules for Billing
+    match /billing/{userId} {
+      allow read: if isOwner(userId) || isAdmin();
+      allow write: if isAdmin();
+    }
+
+    // Rules for User Profiles
+    match /users/{userId} {
+      allow get: if isOwner(userId) || isAdmin();
+      allow list: if isAdmin();
+      allow create: if isOwner(userId) && isValidUserProfile(request.resource.data) && (request.resource.data.get('isAdmin', false) == false);
+      allow update: if isOwner(userId) && isValidUserProfile(request.resource.data) && (
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['fullName', 'birthDate', 'objective', 'updatedAt', 'displayName', 'photoURL'])
+      ) || isAdmin();
+    }
+  }
+}

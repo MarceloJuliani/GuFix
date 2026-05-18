@@ -1,0 +1,102 @@
+{
+  "entities": {
+    "Exercise": {
+      "title": "Exercise",
+      "description": "An individual exercise with metadata and video link.",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "category": { "type": "string" },
+        "subCategory": { "type": "string" },
+        "videoUrl": { "type": "string", "format": "uri" },
+        "description": { "type": "string" },
+        "uploaderId": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["name", "category", "subCategory", "createdAt"]
+    },
+    "UserProfile": {
+      "title": "User Profile",
+      "description": "User account information.",
+      "type": "object",
+      "properties": {
+        "fullName": { "type": "string" },
+        "birthDate": { "type": "string", "format": "date" },
+        "objective": { "type": "string" },
+        "email": { "type": "string", "format": "email" },
+        "photoURL": { "type": "string", "format": "uri" },
+        "isAdmin": { "type": "boolean" },
+        "lastWorkoutType": { "type": "string" }
+      },
+      "required": ["email"]
+    },
+    "Client": {
+      "title": "Client",
+      "description": "Information about a student/client managed by a professional.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "name": { "type": "string" },
+        "email": { "type": "string", "format": "email" },
+        "phone": { "type": "string" },
+        "birthDate": { "type": "string", "format": "date" },
+        "objective": { "type": "string" },
+        "status": { "type": "string", "enum": ["Ativo", "Inativo"] },
+        "appEnabled": { "type": "boolean" },
+        "fee": { "type": "number" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "name", "status", "createdAt"]
+    },
+    "FinishedWorkout": {
+      "title": "Finished Workout",
+      "description": "A record of a completed training session.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "clientId": { "type": "string" },
+        "clientName": { "type": "string" },
+        "workoutId": { "type": "string" },
+        "finishedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "clientName", "finishedAt"]
+    },
+    "Billing": {
+      "title": "Billing",
+      "description": "Information about professional expenses.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "subscriptionCost": { "type": "number" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "subscriptionCost", "updatedAt"]
+    }
+  },
+  "firestore": {
+    "/exercises/{exerciseId}": {
+      "schema": "Exercise",
+      "description": "Collection of all exercises available in the system."
+    },
+    "/workouts/{workoutId}": {
+      "schema": "SavedWorkout",
+      "description": "Collection of saved training prescriptions."
+    },
+    "/clients/{clientId}": {
+      "schema": "Client",
+      "description": "Students managed by professionals."
+    },
+    "/users/{userId}": {
+      "schema": "UserProfile",
+      "description": "Private user profiles."
+    },
+    "/finished_workouts/{id}": {
+      "schema": "FinishedWorkout",
+      "description": "History of completed sessions."
+    },
+    "/billing/{userId}": {
+      "schema": "Billing",
+      "description": "Professional billing settings."
+    }
+  }
+}
