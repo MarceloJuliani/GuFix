@@ -103,7 +103,10 @@ export default function App() {
   const [isSavingWorkout, setIsSavingWorkout] = useState(false);
   const [isAILoading, setIsAILoading] = useState(false);
 
-  const ai = useMemo(() => new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY }), []);
+  const ai = useMemo(
+    () => new GoogleGenAI({ apiKey: import.meta.env.VITE_GEMINI_API_KEY }),
+    []
+  );
 
   // Clients State
   const [clients, setClients] = useState<Client[]>([]);
