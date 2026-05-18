@@ -3,10 +3,9 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { useState, useMemo, useEffect, ChangeEvent } from 'react';
+import { useState, useEffect, ChangeEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { motion, AnimatePresence } from 'motion/react';
-import { GoogleGenAI, Type } from "@google/genai";
 import { 
   Dumbbell, 
   Target, 
@@ -103,10 +102,6 @@ export default function App() {
   const [isSavingWorkout, setIsSavingWorkout] = useState(false);
   const [isAILoading, setIsAILoading] = useState(false);
 
-  const ai = useMemo(
-    () => new GoogleGenAI({ apiKey: import.meta.env.VITE_GEMINI_API_KEY }),
-    []
-  );
 
   // Clients State
   const [clients, setClients] = useState<Client[]>([]);
@@ -820,49 +815,10 @@ export default function App() {
     if (!user) return;
     setIsAILoading(true);
     try {
-      const response = await ai.models.generateContent({
-        model: "gemini-3-flash-preview",
-        contents: `Prescreva um treino para um aluno com o objetivo ${selectedObjective} e base metodológica ${selectedType}. 
-        O objetivo "${selectedObjective}" deve influenciar se você usa o método Simples (1 exercício), Biplex (2 exercícios), Triplex (3 exercícios) ou Quadriplex (4 exercícios). 
-        Se for Metabólico, prefira o método Simples com mais blocos (7-10). Se for Hipertrofia/Força, prefira Biplex/Triplex/Quadriplex (4-6 blocos).
-        
-        Para cada bloco, retorne os exercícios baseados nesta lista: ${JSON.stringify(allExercises.map(e => ({ id: e.id, name: e.name, cat: e.category })))}. 
-        Retorne no formato JSON: { "blocks": [{ "id": 1, "method": "Simples" | "Biplex" | "Triplex" | "Quadriplex", "mainExerciseId": "string", "dischargeExerciseId": "string?", "triplexExerciseId": "string?", "quadriplexExerciseId": "string?", "weight": "string" }] }`,
-        config: {
-          responseMimeType: "application/json",
-          responseSchema: {
-            type: Type.OBJECT,
-            properties: {
-              blocks: {
-                type: Type.ARRAY,
-                items: {
-                  type: Type.OBJECT,
-                  properties: {
-                    id: { type: Type.NUMBER },
-                    method: { type: Type.STRING, enum: ["Simples", "Biplex", "Triplex", "Quadriplex"] },
-                    mainExerciseId: { type: Type.STRING },
-                    dischargeExerciseId: { type: Type.STRING },
-                    triplexExerciseId: { type: Type.STRING },
-                    quadriplexExerciseId: { type: Type.STRING },
-                    weight: { type: Type.STRING }
-                  },
-                  required: ["id", "method", "mainExerciseId", "weight"]
-                }
-              }
-            },
-            required: ["blocks"]
-          }
-        }
-      });
-      
-      const result = JSON.parse(response.text);
-      if (result.blocks && Array.isArray(result.blocks)) {
-        // Ensure unique IDs based on index to avoid React key collisions
-        setBlocks(result.blocks.map((b: any, i: number) => ({ ...b, id: i + 1 })));
-      }
+      loadSample();
     } catch (error) {
-      console.error("AI Error:", error);
-      alert("Falha na prescrição IA. Usando exemplo manual.");
+      console.error("Auto prescription error:", error);
+      alert("Falha ao gerar prescrição automática.");
       loadSample();
     } finally {
       setIsAILoading(false);
