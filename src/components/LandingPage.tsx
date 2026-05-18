@@ -4,6 +4,7 @@
  */
 
 import { motion } from 'motion/react';
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { 
   Dumbbell, 
@@ -18,10 +19,33 @@ import {
   Clock,
   Layout
 } from 'lucide-react';
-import { loginWithGoogle } from '../lib/firebase';
+import { loginWithEmail, registerWithEmail, SessionUser } from '../lib/auth';
 
-export default function LandingPage() {
+type LandingPageProps = {
+  onAuthenticated: (user: SessionUser) => void;
+};
+
+export default function LandingPage({ onAuthenticated }: LandingPageProps) {
   const { t } = useTranslation();
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [fullName, setFullName] = useState('');
+  const [isRegister, setIsRegister] = useState(false);
+  const [loading, setLoading] = useState(false);
+
+  const handleAuth = async () => {
+    setLoading(true);
+    try {
+      const user = isRegister
+        ? await registerWithEmail(fullName, email, password)
+        : await loginWithEmail(email, password);
+      onAuthenticated(user);
+    } catch (e) {
+      alert('Falha no login/cadastro. Verifique email e senha.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-page-bg text-text-main selection:bg-accent selection:text-black overflow-x-hidden">
@@ -36,7 +60,7 @@ export default function LandingPage() {
           </div>
           
           <button 
-            onClick={loginWithGoogle}
+            onClick={handleAuth}
             className="bg-text-main text-page-bg px-6 py-2 rounded-full font-black text-xs uppercase tracking-widest hover:bg-accent transition-all transform hover:scale-105"
           >
             Acessar Sistema
@@ -84,7 +108,7 @@ export default function LandingPage() {
                 className="flex flex-col sm:flex-row items-center gap-4 justify-center lg:justify-start"
               >
                 <button 
-                  onClick={loginWithGoogle}
+                  onClick={handleAuth}
                   className="w-full sm:w-auto bg-accent text-page-bg px-10 py-5 rounded-2xl font-black text-sm uppercase tracking-widest hover:brightness-110 transition-all shadow-2xl shadow-accent/20 flex items-center justify-center gap-3 group"
                 >
                   Começar Agora
@@ -251,7 +275,7 @@ export default function LandingPage() {
             </p>
             
             <button 
-              onClick={loginWithGoogle}
+              onClick={handleAuth}
               className="bg-accent text-page-bg px-12 py-6 rounded-2xl font-black text-lg uppercase tracking-widest hover:scale-105 transition-all shadow-3xl shadow-accent/40 flex items-center justify-center gap-3 mx-auto"
             >
               Criar minha conta grátis
@@ -287,6 +311,44 @@ export default function LandingPage() {
            </div>
         </div>
       </footer>
+
+      <div className="fixed bottom-5 right-5 z-[200] bg-card-bg border border-text-main/10 rounded-2xl p-4 w-[320px] shadow-2xl">
+        <p className="text-xs font-black uppercase tracking-widest mb-3">{isRegister ? 'Criar conta' : 'Entrar'}</p>
+        {isRegister && (
+          <input
+            className="w-full mb-2 bg-page-bg border border-text-main/10 rounded-xl px-3 py-2 text-sm"
+            placeholder="Nome completo"
+            value={fullName}
+            onChange={(e) => setFullName(e.target.value)}
+          />
+        )}
+        <input
+          className="w-full mb-2 bg-page-bg border border-text-main/10 rounded-xl px-3 py-2 text-sm"
+          placeholder="Email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+        />
+        <input
+          type="password"
+          className="w-full mb-3 bg-page-bg border border-text-main/10 rounded-xl px-3 py-2 text-sm"
+          placeholder="Senha"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+        />
+        <button
+          onClick={handleAuth}
+          disabled={loading || !email || !password || (isRegister && !fullName)}
+          className="w-full bg-accent text-page-bg py-2 rounded-xl font-black text-xs uppercase tracking-widest disabled:opacity-50"
+        >
+          {loading ? 'Aguarde...' : isRegister ? 'Cadastrar' : 'Entrar'}
+        </button>
+        <button
+          onClick={() => setIsRegister((v) => !v)}
+          className="w-full mt-2 text-xs text-text-dim hover:text-accent"
+        >
+          {isRegister ? 'Já tenho conta' : 'Criar conta'}
+        </button>
+      </div>
     </div>
   );
 }

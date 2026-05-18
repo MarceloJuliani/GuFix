@@ -58,9 +58,9 @@ import {
   Client
 } from './types';
 import { EXERCISES as STATIC_EXERCISES, OBJECTIVES, TRAINING_TYPES } from './constants';
-import { auth, db, loginWithGoogle, logout, handleFirestoreError, OperationType } from './lib/firebase';
+import { db, handleFirestoreError, OperationType } from './lib/firebase';
 import LandingPage from './components/LandingPage';
-import { onAuthStateChanged, User } from 'firebase/auth';
+import { SessionUser, clearToken, getToken } from './lib/auth';
 import { 
   collection, 
   onSnapshot, 
@@ -84,7 +84,7 @@ export default function App() {
   const [activeTab, setActiveTab] = useState<TabId>('sistema');
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [showUploadForm, setShowUploadForm] = useState(false);
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<{ uid: string; email?: string | null; photoURL?: string | null } | null>(null);
   const [userRole, setUserRole] = useState<'personal' | 'student' | null>(null);
   const [showRoleSelection, setShowRoleSelection] = useState(false);
   const [authLoading, setAuthLoading] = useState(true);
@@ -171,60 +171,38 @@ export default function App() {
   const [showSaveSuccess, setShowSaveSuccess] = useState(false);
 
   useEffect(() => {
-    let unsubscribeWorkouts: (() => void) | null = null;
-    let unsubscribeClients: (() => void) | null = null;
-    let unsubscribeFinished: (() => void) | null = null;
-    let unsubscribeBilling: (() => void) | null = null;
-
-    const unsubscribeAuth = onAuthStateChanged(auth, async (u) => {
-      setUser(u);
+    const token = getToken();
+    if (!token) {
       setAuthLoading(false);
-      
-      if (u) {
-        // Load profile first to get rotation
-        try {
-          const docRef = doc(db, 'users', u.uid);
-          const docSnap = await getDoc(docRef);
-          if (docSnap.exists()) {
-            const data = docSnap.data();
-            setProfileFullName(data.fullName || '');
-            setProfileBirthDate(data.birthDate || '');
-            setProfileObjective(data.objective || '');
-            setLastWorkoutType(data.lastWorkoutType || null);
-            
-            if (data.role) {
-              setUserRole(data.role);
-              // Role exists, we can show selection or stay in role
-              // As requested by user earlier: force selection each login
-              setShowRoleSelection(true);
-            } else {
-              setShowRoleSelection(true);
-            }
-          } else {
-            setShowRoleSelection(true);
-          }
-        } catch (error) {
-          console.error('Error loading profile:', error);
-          setShowRoleSelection(true);
-        }
-      } else {
-        setShowRoleSelection(false);
-        setUserRole(null);
-        setDbWorkouts([]);
-        setClients([]);
-        setFinishedWorkouts([]);
-        setBillingInfo(null);
-      }
-    });
-
-    return () => {
-      unsubscribeAuth();
-      if (unsubscribeWorkouts) unsubscribeWorkouts();
-      if (unsubscribeClients) unsubscribeClients();
-      if (unsubscribeFinished) unsubscribeFinished();
-      if (unsubscribeBilling) unsubscribeBilling();
-    };
+      return;
+    }
+    fetch('/api/auth/me', { headers: { Authorization: `Bearer ${token}` } })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (!data?.user) return;
+        setUser({ uid: data.user.id, email: data.user.email, photoURL: null });
+        setUserRole(data.user.role || 'personal');
+      })
+      .finally(() => setAuthLoading(false));
   }, []);
+
+  const handleAuthenticated = (authUser: SessionUser) => {
+    setUser({ uid: authUser.id, email: authUser.email, photoURL: null });
+    setUserRole((authUser.role as 'personal' | 'student') || 'personal');
+    setAuthLoading(false);
+    setShowRoleSelection(false);
+  };
+
+  const handleLogout = () => {
+    clearToken();
+    setUser(null);
+    setUserRole(null);
+    setShowRoleSelection(false);
+    setDbWorkouts([]);
+    setClients([]);
+    setFinishedWorkouts([]);
+    setBillingInfo(null);
+  };
 
   // Separate effect for data listeners that depends on role
   useEffect(() => {
@@ -845,7 +823,7 @@ export default function App() {
   }
 
   if (!user) {
-    return <LandingPage />;
+    return <LandingPage onAuthenticated={handleAuthenticated} />;
   }
 
   return (
@@ -912,7 +890,7 @@ export default function App() {
 
                 <button
                   onClick={() => {
-                    logout();
+                    handleLogout();
                     setIsMenuOpen(false);
                     setUserRole(null);
                     setShowRoleSelection(false);
@@ -1043,7 +1021,7 @@ export default function App() {
                 <div className="w-8 h-8 rounded-full bg-text-main/5 animate-pulse" />
               ) : user ? (
                 <button 
-                  onClick={logout}
+                  onClick={handleLogout}
                   className="group flex items-center gap-2 bg-text-main/5 hover:bg-red-500/10 p-2 rounded-lg border border-text-main/5 transition-all"
                   title="Sair"
                 >
@@ -1056,7 +1034,7 @@ export default function App() {
                 </button>
               ) : (
                 <button 
-                  onClick={loginWithGoogle}
+                  onClick={() => setActiveTab('sistema')}
                   className="flex items-center gap-2 bg-accent text-page-bg px-4 py-2 rounded-lg font-black text-[10px] uppercase tracking-widest hover:brightness-110 transition-all"
                 >
                   <LogIn className="w-3 h-3" />
@@ -1881,7 +1859,7 @@ export default function App() {
                     <button
                       onClick={() => {
                         if (!user) {
-                          loginWithGoogle();
+                          setActiveTab('sistema');
                         } else {
                           setShowUploadForm(!showUploadForm);
                         }

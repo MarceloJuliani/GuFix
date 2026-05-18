@@ -4,6 +4,7 @@ import cors from "cors";
 import mysql from "mysql2/promise";
 import path from "path";
 import { randomUUID } from "crypto";
+import bcrypt from "bcryptjs";
 
 const app = express();
 app.use(cors());
@@ -15,6 +16,33 @@ const MYSQL_PORT = Number(process.env.MYSQL_PORT || 3306);
 const MYSQL_USER = process.env.MYSQL_USER;
 const MYSQL_PASSWORD = process.env.MYSQL_PASSWORD;
 const MYSQL_DATABASE = process.env.MYSQL_DATABASE || "gufix_app";
+const AUTH_SECRET = process.env.AUTH_SECRET || "gufix-local-secret";
+
+type AuthUser = {
+  id: string;
+  email: string;
+  fullName: string | null;
+  role: "personal" | "student" | null;
+};
+
+function signToken(payload: AuthUser) {
+  const data = Buffer.from(JSON.stringify(payload)).toString("base64url");
+  const secret = Buffer.from(AUTH_SECRET).toString("base64url");
+  return `${data}.${secret}`;
+}
+
+function parseToken(token?: string): AuthUser | null {
+  if (!token) return null;
+  const [data, secret] = token.split(".");
+  if (!data || !secret) return null;
+  const expectedSecret = Buffer.from(AUTH_SECRET).toString("base64url");
+  if (secret !== expectedSecret) return null;
+  try {
+    return JSON.parse(Buffer.from(data, "base64url").toString("utf8"));
+  } catch {
+    return null;
+  }
+}
 
 if (!MYSQL_HOST || !MYSQL_USER || !MYSQL_PASSWORD) {
   console.warn("MySQL env vars are missing. Set MYSQL_HOST, MYSQL_USER, MYSQL_PASSWORD.");
@@ -36,6 +64,65 @@ app.get("/api/health", async (_req, res) => {
   } catch (error) {
     res.status(500).json({ ok: false, error: String(error) });
   }
+});
+
+app.post("/api/auth/register", async (req, res) => {
+  const { fullName, email, password, role } = req.body || {};
+  if (!email || !password) {
+    return res.status(400).json({ error: "email and password are required" });
+  }
+
+  const [existingRows] = await pool.query("SELECT id FROM usuarios WHERE email = ? LIMIT 1", [email]);
+  if (Array.isArray(existingRows) && existingRows.length > 0) {
+    return res.status(409).json({ error: "email already registered" });
+  }
+
+  const id = randomUUID();
+  const passwordHash = await bcrypt.hash(password, 10);
+  await pool.query(
+    `INSERT INTO usuarios (id, full_name, email, role, password_hash)
+     VALUES (?, ?, ?, ?, ?)`,
+    [id, fullName || null, email, role || "personal", passwordHash]
+  );
+
+  const user: AuthUser = { id, email, fullName: fullName || null, role: role || "personal" };
+  const token = signToken(user);
+  res.json({ token, user });
+});
+
+app.post("/api/auth/login", async (req, res) => {
+  const { email, password } = req.body || {};
+  if (!email || !password) {
+    return res.status(400).json({ error: "email and password are required" });
+  }
+
+  const [rows] = await pool.query(
+    `SELECT id, full_name as fullName, email, role, password_hash as passwordHash
+     FROM usuarios WHERE email = ? LIMIT 1`,
+    [email]
+  );
+  const row = Array.isArray(rows) ? (rows[0] as any) : null;
+  if (!row) return res.status(401).json({ error: "invalid credentials" });
+
+  const ok = await bcrypt.compare(password, row.passwordHash || "");
+  if (!ok) return res.status(401).json({ error: "invalid credentials" });
+
+  const user: AuthUser = {
+    id: row.id,
+    email: row.email,
+    fullName: row.fullName || null,
+    role: row.role || null,
+  };
+  const token = signToken(user);
+  res.json({ token, user });
+});
+
+app.get("/api/auth/me", async (req, res) => {
+  const raw = String(req.headers.authorization || "");
+  const token = raw.startsWith("Bearer ") ? raw.slice(7) : "";
+  const user = parseToken(token);
+  if (!user) return res.status(401).json({ error: "unauthorized" });
+  res.json({ user });
 });
 
 app.post("/api/users/upsert", async (req, res) => {
@@ -166,4 +253,3 @@ app.get("*", (_req, res) => {
 app.listen(PORT, () => {
   console.log(`GuFix API running on port ${PORT}`);
 });
-
