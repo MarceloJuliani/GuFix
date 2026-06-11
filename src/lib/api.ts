@@ -1,5 +1,6 @@
 import { Client, Exercise, SavedWorkout, TrainingType } from '../types';
 import { getToken } from './auth';
+import { apiUrl, readApiError } from './http';
 
 export type CurrentUser = {
   id: string;
@@ -42,7 +43,7 @@ function timestampLike(value: unknown) {
 
 async function apiFetch<T>(path: string, options: RequestOptions = {}): Promise<T> {
   const token = getToken();
-  const response = await fetch(path, {
+  const response = await fetch(apiUrl(path), {
     method: options.method || 'GET',
     headers: {
       'Content-Type': 'application/json',
@@ -51,10 +52,10 @@ async function apiFetch<T>(path: string, options: RequestOptions = {}): Promise<
     body: options.body === undefined ? undefined : JSON.stringify(options.body),
   });
 
-  const data = await response.json().catch(() => null);
   if (!response.ok) {
-    throw new Error(data?.error || `Erro na API (${response.status})`);
+    throw new Error(await readApiError(response, `Erro na API (${response.status})`));
   }
+  const data = await response.json().catch(() => null);
   return data as T;
 }
 

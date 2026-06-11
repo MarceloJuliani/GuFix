@@ -36,8 +36,8 @@ export default function LandingPage({ onAuthenticated }: LandingPageProps) {
         ? await registerWithEmail(fullName, email, password)
         : await loginWithEmail(email, password);
       onAuthenticated(user);
-    } catch {
-      setErrorMsg('Falha no login/cadastro. Verifique usuario e senha.');
+    } catch (error) {
+      setErrorMsg(error instanceof Error ? error.message : 'Falha no login/cadastro.');
     } finally {
       setLoading(false);
     }

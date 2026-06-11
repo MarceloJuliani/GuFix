@@ -24,6 +24,8 @@ Pré-requisitos:
 
 - Build: `npm run build`
 - Start: `npm run start`
+- Em produção, o frontend precisa alcançar a API Express. Se a API ficar no mesmo domínio, `/api/...` funciona direto. Se ficar em outro domínio, configure `VITE_API_BASE_URL` no build do frontend.
+- Cadastro e login salvam no MySQL somente quando `npm run start` está rodando com `MYSQL_HOST`, `MYSQL_USER`, `MYSQL_PASSWORD` e `MYSQL_DATABASE` configurados.
 
 ## Observação importante
 
