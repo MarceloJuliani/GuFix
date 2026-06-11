@@ -1,15 +1,13 @@
 import { initializeApp, getApps, getApp } from 'firebase/app';
 import { 
   getAuth, 
-  GoogleAuthProvider, 
-  signInWithPopup, 
   signOut,
   indexedDBLocalPersistence,
   browserLocalPersistence,
   initializeAuth
 } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
-import firebaseConfig from '../../firebase-applet-config.json';
+import firebaseConfig from '../../firebase-config.json';
 
 // Initialize Firebase App
 const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
@@ -22,15 +20,15 @@ let authInstance;
 try {
   authInstance = getAuth(app);
 } catch (e) {
-  // If getAuth fails or we need specific persistence
+  // This app uses email/password via backend API for login.
+  // Disabling popup/redirect resolver prevents unauthorized-domain errors in local dev.
   authInstance = initializeAuth(app, {
-    persistence: [indexedDBLocalPersistence, browserLocalPersistence]
+    persistence: [indexedDBLocalPersistence, browserLocalPersistence],
+    popupRedirectResolver: undefined
   });
 }
 
 export const auth = authInstance;
-export const googleProvider = new GoogleAuthProvider();
-googleProvider.setCustomParameters({ prompt: 'select_account' });
 
 export enum OperationType {
   CREATE = 'create',
@@ -78,19 +76,5 @@ export function handleFirestoreError(error: unknown, operationType: OperationTyp
   console.error('Firestore Error: ', JSON.stringify(errInfo));
   throw new Error(JSON.stringify(errInfo));
 }
-
-export const loginWithGoogle = async () => {
-  try {
-    const result = await signInWithPopup(auth, googleProvider);
-    return result.user;
-  } catch (error: any) {
-    if (error.code === 'auth/popup-closed-by-user') {
-      console.warn('Sign-in popup closed by user.');
-      return null;
-    }
-    console.error('Login error:', error);
-    throw error;
-  }
-};
 
 export const logout = () => signOut(auth);

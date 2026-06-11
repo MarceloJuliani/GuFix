@@ -15,9 +15,43 @@ CREATE TABLE IF NOT EXISTS usuarios (
   objective VARCHAR(80) NULL,
   email VARCHAR(255) NULL,
   role ENUM('personal', 'student') NULL,
+  password_hash VARCHAR(255) NULL,
   last_workout_type VARCHAR(80) NULL,
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  UNIQUE KEY idx_usuarios_email (email)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- Usuario inicial para acesso ao sistema
+SET @seed_mjuliani25_id = COALESCE(
+  (SELECT id FROM usuarios WHERE email = 'mjuliani25@gmail.com' LIMIT 1),
+  '8d0a6ea6-9d1f-4c59-a4db-fdcd9647b208'
+);
+
+INSERT INTO usuarios (id, full_name, email, role, password_hash)
+VALUES (
+  @seed_mjuliani25_id,
+  'Marcelo Juliani',
+  'mjuliani25@gmail.com',
+  'personal',
+  '$2b$10$hctZFB.fdEazSxMKOeLEHuydzJRkGWNJdTHYqKT1GyMLFru9/Zfem'
+)
+ON DUPLICATE KEY UPDATE
+  full_name = VALUES(full_name),
+  email = VALUES(email),
+  role = VALUES(role),
+  password_hash = VALUES(password_hash);
+
+CREATE TABLE IF NOT EXISTS webauthn_credentials (
+  id BIGINT AUTO_INCREMENT PRIMARY KEY,
+  user_id VARCHAR(128) NOT NULL,
+  credential_id VARCHAR(255) NOT NULL UNIQUE,
+  public_key TEXT NOT NULL,
+  counter BIGINT NOT NULL DEFAULT 0,
+  transports JSON NULL,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  CONSTRAINT fk_webauthn_user FOREIGN KEY (user_id) REFERENCES usuarios(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- Clientes atendidos pelo profissional
@@ -98,7 +132,6 @@ CREATE TABLE IF NOT EXISTS treinos_finalizados (
   workout_id VARCHAR(128) NOT NULL,
   finished_at DATETIME NOT NULL,
   CONSTRAINT fk_finished_user FOREIGN KEY (user_id) REFERENCES usuarios(id) ON DELETE CASCADE,
-  CONSTRAINT fk_finished_client FOREIGN KEY (client_id) REFERENCES usuarios(id) ON DELETE CASCADE,
   CONSTRAINT fk_finished_workout FOREIGN KEY (workout_id) REFERENCES treinos(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 

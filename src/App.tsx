@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { useState, useMemo, useEffect, ChangeEvent } from 'react';
+import { useState, useMemo, useEffect, ChangeEvent, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
@@ -58,24 +58,9 @@ import {
   Client
 } from './types';
 import { EXERCISES as STATIC_EXERCISES, OBJECTIVES, TRAINING_TYPES } from './constants';
-import { db, handleFirestoreError, OperationType } from './lib/firebase';
 import LandingPage from './components/LandingPage';
 import { SessionUser, clearToken, getToken } from './lib/auth';
-import { 
-  collection, 
-  onSnapshot, 
-  addDoc, 
-  deleteDoc, 
-  doc, 
-  getDoc,
-  setDoc,
-  query, 
-  orderBy, 
-  where,
-  serverTimestamp,
-  Timestamp,
-  updateDoc
-} from 'firebase/firestore';
+import * as api from './lib/api';
 
 type TabId = 'sistema' | 'biblioteca' | 'metodologia' | 'perfil' | 'historico' | 'alunos' | 'assinatura' | 'treinos_feitos';
 
@@ -84,7 +69,7 @@ export default function App() {
   const [activeTab, setActiveTab] = useState<TabId>('sistema');
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [showUploadForm, setShowUploadForm] = useState(false);
-  const [user, setUser] = useState<{ uid: string; email?: string | null; photoURL?: string | null } | null>(null);
+  const [user, setUser] = useState<{ uid: string; email?: string | null; photoURL?: string | null; displayName?: string | null } | null>(null);
   const [userRole, setUserRole] = useState<'personal' | 'student' | null>(null);
   const [showRoleSelection, setShowRoleSelection] = useState(false);
   const [authLoading, setAuthLoading] = useState(true);
@@ -170,25 +155,40 @@ export default function App() {
   const [clientStatusFilter, setClientStatusFilter] = useState<'Todos' | 'Ativo' | 'Inativo'>('Todos');
   const [showSaveSuccess, setShowSaveSuccess] = useState(false);
 
+  const handleApiError = (error: unknown, context: string) => {
+    console.error(`API Error (${context}):`, error);
+    alert(error instanceof Error ? error.message : 'Erro ao acessar o banco de dados.');
+  };
+
   useEffect(() => {
     const token = getToken();
     if (!token) {
       setAuthLoading(false);
       return;
     }
-    fetch('/api/auth/me', { headers: { Authorization: `Bearer ${token}` } })
-      .then((r) => (r.ok ? r.json() : null))
-      .then((data) => {
-        if (!data?.user) return;
-        setUser({ uid: data.user.id, email: data.user.email, photoURL: null });
-        setUserRole(data.user.role || 'personal');
+    api.getCurrentUser()
+      .then((currentUser) => {
+        if (!currentUser) return;
+        setUser({
+          uid: currentUser.id,
+          email: currentUser.email,
+          photoURL: null,
+          displayName: currentUser.fullName || null,
+        });
+        setUserRole(currentUser.role || 'personal');
+        setProfileFullName(currentUser.fullName || '');
+        setProfileBirthDate(currentUser.birthDate || '');
+        setProfileObjective(currentUser.objective || '');
+        setLastWorkoutType((currentUser.lastWorkoutType as TrainingType | null) || null);
       })
+      .catch(() => clearToken())
       .finally(() => setAuthLoading(false));
   }, []);
 
   const handleAuthenticated = (authUser: SessionUser) => {
-    setUser({ uid: authUser.id, email: authUser.email, photoURL: null });
+    setUser({ uid: authUser.id, email: authUser.email, photoURL: null, displayName: authUser.fullName || null });
     setUserRole((authUser.role as 'personal' | 'student') || 'personal');
+    setProfileFullName(authUser.fullName || '');
     setAuthLoading(false);
     setShowRoleSelection(false);
   };
@@ -202,112 +202,45 @@ export default function App() {
     setClients([]);
     setFinishedWorkouts([]);
     setBillingInfo(null);
+    setDbExercises([]);
+    setProfileFullName('');
+    setProfileBirthDate('');
+    setProfileObjective('');
+    setLastWorkoutType(null);
   };
 
-  // Separate effect for data listeners that depends on role
-  useEffect(() => {
-    if (!user) return;
+  const loadAppData = useCallback(async () => {
+    if (!user || !userRole) return;
 
-    let unsubscribeWorkouts: (() => void) | null = null;
-    let unsubscribeClients: (() => void) | null = null;
-    let unsubscribeFinished: (() => void) | null = null;
-    let unsubscribeBilling: (() => void) | null = null;
+    const [currentUser, exercises, workouts, finished] = await Promise.all([
+      api.getCurrentUser(),
+      api.listExercises(),
+      api.listWorkouts(userRole),
+      api.listFinishedWorkouts(userRole),
+    ]);
 
-    // Workouts Query
-    const qW = userRole === 'student' 
-      ? query(collection(db, 'workouts'), where('clientId', '==', user.uid))
-      : query(collection(db, 'workouts'), where('userId', '==', user.uid));
+    setProfileFullName(currentUser.fullName || '');
+    setProfileBirthDate(currentUser.birthDate || '');
+    setProfileObjective(currentUser.objective || '');
+    setLastWorkoutType((currentUser.lastWorkoutType as TrainingType | null) || null);
+    setDbExercises(exercises);
+    setDbWorkouts(workouts);
+    setFinishedWorkouts(finished);
 
-    unsubscribeWorkouts = onSnapshot(qW, (snapshot) => {
-      const docs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as SavedWorkout[];
-      docs.sort((a, b) => {
-        const dateA = a.createdAt?.toMillis ? a.createdAt.toMillis() : 0;
-        const dateB = b.createdAt?.toMillis ? b.createdAt.toMillis() : 0;
-        return dateB - dateA;
-      });
-      setDbWorkouts(docs);
-    }, (error) => {
-      handleFirestoreError(error, OperationType.LIST, 'workouts');
-    });
-
-    // Clients Query (Only for Personal)
     if (userRole === 'personal') {
-      const qC = query(collection(db, 'clients'), where('userId', '==', user.uid));
-      unsubscribeClients = onSnapshot(qC, (snapshot) => {
-        const docs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Client[];
-        docs.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
-        setClients(docs);
-      }, (error) => {
-        handleFirestoreError(error, OperationType.LIST, 'clients');
-      });
+      const [clientRows, billing] = await Promise.all([api.listClients(), api.getBilling()]);
+      setClients(clientRows);
+      setBillingInfo(billing);
     } else {
       setClients([]);
+      setBillingInfo(null);
     }
-
-    // Finished Workouts Query
-    const qF = userRole === 'student'
-      ? query(collection(db, 'finished_workouts'), where('clientId', '==', user.uid), orderBy('finishedAt', 'desc'))
-      : query(collection(db, 'finished_workouts'), where('userId', '==', user.uid), orderBy('finishedAt', 'desc'));
-
-    unsubscribeFinished = onSnapshot(qF, (snapshot) => {
-      setFinishedWorkouts(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-    }, (error) => {
-      // It's possible ordering fails if index is missing, handle gracefully
-      if (error.message.includes('index')) {
-        console.warn('Index missing for finished_workouts, falling back to unordered list');
-        const qFUnordered = userRole === 'student'
-          ? query(collection(db, 'finished_workouts'), where('clientId', '==', user.uid))
-          : query(collection(db, 'finished_workouts'), where('userId', '==', user.uid));
-        onSnapshot(qFUnordered, (snap) => {
-           setFinishedWorkouts(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-        });
-      } else {
-        handleFirestoreError(error, OperationType.LIST, 'finished_workouts');
-      }
-    });
-
-    // Billing Query (Only for Personal)
-    if (userRole === 'personal') {
-      unsubscribeBilling = onSnapshot(doc(db, 'billing', user.uid), (snapshot) => {
-        if (snapshot.exists()) {
-          setBillingInfo(snapshot.data() as any);
-        } else {
-          setBillingInfo({ subscriptionCost: 99.90 });
-          setDoc(doc(db, 'billing', user.uid), { subscriptionCost: 99.90, updatedAt: serverTimestamp() });
-        }
-      }, (error) => {
-        handleFirestoreError(error, OperationType.GET, `billing/${user.uid}`);
-      });
-    }
-
-    return () => {
-      if (unsubscribeWorkouts) unsubscribeWorkouts();
-      if (unsubscribeClients) unsubscribeClients();
-      if (unsubscribeFinished) unsubscribeFinished();
-      if (unsubscribeBilling) unsubscribeBilling();
-    };
   }, [user, userRole]);
 
   useEffect(() => {
-    if (authLoading) return;
-
-    const q = query(collection(db, 'exercises'), orderBy('createdAt', 'desc'));
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const docs = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      })) as Exercise[];
-      setDbExercises(docs);
-    }, (error) => {
-      // If we still get a permission error (e.g. during rules refresh), we log it but don't let it crash the app mount
-      if (error.message.includes('permission')) {
-        console.warn('Firestore: Exercícios de banco restritos ou não disponíveis no momento.');
-      } else {
-        handleFirestoreError(error, OperationType.LIST, 'exercises');
-      }
-    });
-    return unsubscribe;
-  }, [authLoading]);
+    if (authLoading || !user) return;
+    loadAppData().catch((error) => handleApiError(error, 'load app data'));
+  }, [authLoading, user, loadAppData]);
 
   useEffect(() => {
     if (userRole === 'student' && dbWorkouts.length > 0) {
@@ -453,38 +386,20 @@ export default function App() {
     if (!user || !clientName || !workoutValidation.isValid) return;
     setIsSavingWorkout(true);
     try {
-      const workoutData = {
-        userId: user.uid,
+      await api.createWorkout({
         clientName,
         clientId: selectedClientId || null,
         type: selectedType,
         objective: selectedObjective,
         blocks,
-        createdAt: serverTimestamp(),
-        archived: false
-      };
-      
-      await addDoc(collection(db, 'workouts'), workoutData);
-
-      // If we have a selected client ID, we could also update the client's last workout
-      if (selectedClientId) {
-        await setDoc(doc(db, 'clients', selectedClientId), {
-          lastTrainingAt: serverTimestamp(),
-          lastTrainingType: selectedType
-        }, { merge: true });
-      }
-      
-      // Update professional's profile record of last activity
-      await setDoc(doc(db, 'users', user.uid), {
-        lastWorkoutType: selectedType,
-        updatedAt: serverTimestamp()
-      }, { merge: true });
+      });
 
       setLastWorkoutType(selectedType);
+      await loadAppData();
       setShowSaveSuccess(true);
       setTimeout(() => setShowSaveSuccess(false), 3000);
     } catch (error) {
-      handleFirestoreError(error, OperationType.WRITE, 'workouts');
+      handleApiError(error, 'save workout');
     } finally {
       setIsSavingWorkout(false);
     }
@@ -492,9 +407,10 @@ export default function App() {
 
   const handleDeleteWorkout = async (id: string) => {
     try {
-      await deleteDoc(doc(db, 'workouts', id));
+      await api.deleteWorkout(id);
+      setDbWorkouts((items) => items.filter((item) => item.id !== id));
     } catch (error) {
-      handleFirestoreError(error, OperationType.DELETE, `workouts/${id}`);
+      handleApiError(error, `delete workout ${id}`);
     }
   };
 
@@ -505,16 +421,16 @@ export default function App() {
     }
     setIsAddingClient(true);
     try {
-      await setDoc(doc(db, 'clients', editingClient.id), {
+      await api.updateClient(editingClient.id, {
         name: editingClient.name,
         email: editingClient.email || '',
         fee: editingClient.fee || 150,
         status: editingClient.status,
-        updatedAt: serverTimestamp()
-      }, { merge: true });
+      });
       setEditingClient(null);
+      await loadAppData();
     } catch (error) {
-      handleFirestoreError(error, OperationType.WRITE, `clients/${editingClient.id}`);
+      handleApiError(error, `update client ${editingClient.id}`);
     } finally {
       setIsAddingClient(false);
     }
@@ -526,12 +442,12 @@ export default function App() {
       return;
     }
     try {
-      await setDoc(doc(db, 'clients', client.id), {
+      const updated = await api.updateClient(client.id, {
         status: newStatus,
-        updatedAt: serverTimestamp()
-      }, { merge: true });
+      });
+      setClients((items) => items.map((item) => (item.id === updated.id ? updated : item)));
     } catch (error) {
-      handleFirestoreError(error, OperationType.WRITE, `clients/${client.id}`);
+      handleApiError(error, `update client status ${client.id}`);
     }
   };
 
@@ -539,20 +455,18 @@ export default function App() {
     if (!user || !newClientName) return;
     setIsAddingClient(true);
     try {
-      await addDoc(collection(db, 'clients'), {
-        userId: user.uid,
+      await api.createClient({
         name: newClientName,
         email: newClientEmail,
         fee: newClientFee,
-        status: 'Ativo',
-        createdAt: serverTimestamp()
       });
       setNewClientName('');
       setNewClientEmail('');
       setNewClientFee(150);
       setShowAddClientModal(false);
+      await loadAppData();
     } catch (error) {
-      handleFirestoreError(error, OperationType.WRITE, 'clients');
+      handleApiError(error, 'add client');
     } finally {
       setIsAddingClient(false);
     }
@@ -574,16 +488,16 @@ export default function App() {
     if (!user) return;
     setIsSavingProfile(true);
     try {
-      await setDoc(doc(db, 'users', user.uid), {
+      const updatedUser = await api.updateUserProfile({
         fullName: profileFullName,
         birthDate: profileBirthDate,
         objective: profileObjective,
         email: user.email,
-        updatedAt: serverTimestamp()
-      }, { merge: true });
+      });
+      setUser((current) => current ? { ...current, displayName: updatedUser.fullName || null } : current);
       setIsMenuOpen(false);
     } catch (error) {
-      handleFirestoreError(error, OperationType.WRITE, `users/${user.uid}`);
+      handleApiError(error, `save profile ${user.uid}`);
     } finally {
       setIsSavingProfile(false);
     }
@@ -599,13 +513,11 @@ export default function App() {
     if (!user || !client?.id) return;
     setIsEnablingApp(true);
     try {
-      await setDoc(doc(db, 'clients', client.id), {
-        appEnabled: true,
-        updatedAt: serverTimestamp()
-      }, { merge: true });
+      const updated = await api.enableClientApp(client.id);
+      setClients((items) => items.map((item) => (item.id === updated.id ? updated : item)));
       alert(t('email_sent_msg'));
     } catch (error) {
-      handleFirestoreError(error, OperationType.WRITE, `clients/${client?.id}`);
+      handleApiError(error, `enable app ${client?.id}`);
     } finally {
       setIsEnablingApp(false);
     }
@@ -615,16 +527,11 @@ export default function App() {
     if (!user) return;
     setIsFinishingWorkout(true);
     try {
-      await addDoc(collection(db, 'finished_workouts'), {
-        userId: workout.userId, // The professional's ID
-        clientId: user.uid, // The student's ID (current user)
-        clientName: profileFullName || user.displayName || user.email,
-        workoutId: workout.id,
-        finishedAt: serverTimestamp()
-      });
+      await api.finishWorkout(workout.id, profileFullName || user.displayName || user.email);
+      await loadAppData();
       alert(t('workout_finished_msg'));
     } catch (error) {
-      handleFirestoreError(error, OperationType.CREATE, 'finished_workouts');
+      handleApiError(error, 'finish workout');
     } finally {
       setIsFinishingWorkout(false);
     }
@@ -645,14 +552,11 @@ export default function App() {
   const handleSetRole = async (role: 'personal' | 'student') => {
     if (!user) return;
     try {
-      await setDoc(doc(db, 'users', user.uid), {
-        role,
-        updatedAt: serverTimestamp()
-      }, { merge: true });
+      await api.updateUserProfile({ role });
       setUserRole(role);
       setShowRoleSelection(false);
     } catch (error) {
-      handleFirestoreError(error, OperationType.WRITE, `users/${user.uid}`);
+      handleApiError(error, `set role ${user.uid}`);
     }
   };
 
@@ -684,15 +588,12 @@ export default function App() {
       // Simulate network delay
       await new Promise(resolve => setTimeout(resolve, 1500));
 
-      await addDoc(collection(db, 'exercises'), {
+      await api.createExercise({
         name: newExName,
         category: newExCategory,
         subCategory: newExSubCategory,
         videoUrl: newExVideoUrl,
-        uploaderId: user.uid,
         suggestToGlobal,
-        status: suggestToGlobal ? 'pending_moderation' : 'active',
-        createdAt: serverTimestamp(),
       });
       
       setNewExName('');
@@ -701,8 +602,9 @@ export default function App() {
       setUploadProgress(0);
       setSuggestToGlobal(false);
       setShowUploadForm(false);
+      await loadAppData();
     } catch (error) {
-      handleFirestoreError(error, OperationType.CREATE, 'exercises');
+      handleApiError(error, 'add exercise');
     } finally {
       setIsSubmitting(false);
       clearInterval(interval);
@@ -711,9 +613,10 @@ export default function App() {
 
   const handleDeleteExercise = async (id: string) => {
     try {
-      await deleteDoc(doc(db, 'exercises', id));
+      await api.deleteExercise(id);
+      setDbExercises((items) => items.filter((item) => item.id !== id));
     } catch (error) {
-      handleFirestoreError(error, OperationType.DELETE, 'exercises');
+      handleApiError(error, `delete exercise ${id}`);
     }
   };
 

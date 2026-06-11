@@ -29,3 +29,12 @@ Pré-requisitos:
 
 Atualmente a interface ainda possui integrações Firebase em parte do fluxo.
 A API MySQL (`server/index.ts`) já está pronta para a migração do frontend.
+
+## Biometria (WebAuthn)
+
+- O login biométrico usa WebAuthn com validação no backend e credenciais salvas no MySQL.
+- Para produção, configure no `.env`:
+  - `WEBAUTHN_RP_NAME`
+  - `WEBAUTHN_RP_ID` (ex.: seu domínio)
+  - `WEBAUTHN_RP_ORIGIN` (ex.: `https://seu-dominio.com`)
+- Execute migração para tabela `webauthn_credentials` e coluna `usuarios.password_hash` se seu banco já existir.
