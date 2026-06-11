@@ -76,59 +76,59 @@ export default function LandingPage({ onAuthenticated }: LandingPageProps) {
   };
 
   return (
-    <div className="min-h-screen bg-page-bg text-text-main selection:bg-accent selection:text-black overflow-hidden flex items-center justify-center p-6">
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(var(--accent-rgb),0.12),transparent_40%),radial-gradient(circle_at_80%_80%,rgba(var(--accent-rgb),0.08),transparent_35%)]" />
+    <div className="min-h-[100svh] bg-page-bg text-text-main selection:bg-accent selection:text-black overflow-x-hidden overflow-y-auto flex items-center justify-center p-3 sm:p-6">
+      <div className="fixed inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(var(--accent-rgb),0.12),transparent_40%),radial-gradient(circle_at_80%_80%,rgba(var(--accent-rgb),0.08),transparent_35%)]" />
 
       <motion.div
         initial={{ opacity: 0, y: 24 }}
         animate={{ opacity: 1, y: 0 }}
-        className="relative w-full max-w-md bg-card-bg border border-text-main/10 rounded-[2rem] p-8 shadow-2xl"
+        className="relative w-full max-w-[28rem] bg-card-bg border border-text-main/10 rounded-[1.5rem] sm:rounded-[2rem] p-5 sm:p-8 shadow-2xl"
       >
-        <div className="flex items-center justify-between mb-8">
+        <div className="flex items-center justify-between gap-3 mb-6 sm:mb-8">
           <div className="flex items-center gap-3">
             <div className="bg-accent/10 text-accent p-2 rounded">
               <Dumbbell className="w-5 h-5" />
             </div>
-            <h1 className="text-2xl font-display font-black tracking-tighter italic">GU<span className="text-accent">FIX</span></h1>
+            <h1 className="text-xl sm:text-2xl font-display font-black tracking-tighter italic">GU<span className="text-accent">FIX</span></h1>
           </div>
-          <span className="text-[10px] uppercase font-black tracking-[0.2em] text-text-dim">Acesso Seguro</span>
+          <span className="shrink-0 text-[9px] sm:text-[10px] uppercase font-black tracking-[0.12em] sm:tracking-[0.2em] text-text-dim">Acesso Seguro</span>
         </div>
 
-        <h2 className="text-3xl font-black italic uppercase tracking-tighter mb-2">{isRegister ? 'Criar Conta' : 'Entrar'}</h2>
-        <p className="text-xs font-bold text-text-dim uppercase tracking-widest mb-6">Use usuario e senha para acessar</p>
+        <h2 className="text-2xl sm:text-3xl font-black italic uppercase tracking-tighter mb-2">{isRegister ? 'Criar Conta' : 'Entrar'}</h2>
+        <p className="text-[10px] sm:text-xs font-bold text-text-dim uppercase tracking-[0.12em] sm:tracking-widest mb-5 sm:mb-6">Use usuario e senha para acessar</p>
 
         <div className="space-y-3">
           {isRegister && (
             <input
-              className="w-full bg-page-bg border border-text-main/10 rounded-xl px-4 py-3 text-sm"
+              className="w-full bg-page-bg border border-text-main/10 rounded-lg sm:rounded-xl px-3 sm:px-4 py-3 text-sm"
               placeholder="Nome completo"
               value={fullName}
               onChange={(e) => setFullName(e.target.value)}
             />
           )}
           <input
-            className="w-full bg-page-bg border border-text-main/10 rounded-xl px-4 py-3 text-sm"
+            className="w-full bg-page-bg border border-text-main/10 rounded-lg sm:rounded-xl px-3 sm:px-4 py-3 text-sm"
             placeholder="Usuario (email)"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
           />
           <input
             type="password"
-            className="w-full bg-page-bg border border-text-main/10 rounded-xl px-4 py-3 text-sm"
+            className="w-full bg-page-bg border border-text-main/10 rounded-lg sm:rounded-xl px-3 sm:px-4 py-3 text-sm"
             placeholder="Senha"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
           />
         </div>
 
-        {errorMsg && <p className="mt-4 text-xs font-bold uppercase tracking-widest text-red-500">{errorMsg}</p>}
-        {successMsg && <p className="mt-4 text-xs font-bold uppercase tracking-widest text-accent">{successMsg}</p>}
+        {errorMsg && <p className="mt-4 break-words text-[10px] sm:text-xs font-bold uppercase tracking-[0.08em] sm:tracking-widest text-red-500">{errorMsg}</p>}
+        {successMsg && <p className="mt-4 break-words text-[10px] sm:text-xs font-bold uppercase tracking-[0.08em] sm:tracking-widest text-accent">{successMsg}</p>}
 
-        <div className="mt-6 space-y-3">
+        <div className="mt-5 sm:mt-6 space-y-3">
           <button
             onClick={handleAuth}
             disabled={loading || !email || !password || (isRegister && !fullName)}
-            className="w-full bg-accent text-page-bg py-3 rounded-xl font-black text-xs uppercase tracking-widest disabled:opacity-50 flex items-center justify-center gap-2"
+            className="w-full min-h-12 bg-accent text-page-bg py-3 rounded-lg sm:rounded-xl font-black text-[11px] sm:text-xs uppercase tracking-[0.08em] sm:tracking-widest disabled:opacity-50 flex items-center justify-center gap-2"
           >
             {isRegister ? <UserPlus className="w-4 h-4" /> : <LogIn className="w-4 h-4" />}
             {loading ? 'Aguarde...' : isRegister ? 'Cadastrar' : 'Entrar'}
@@ -137,7 +137,7 @@ export default function LandingPage({ onAuthenticated }: LandingPageProps) {
           <button
             onClick={handleBiometricLogin}
             disabled={loading || !biometricSupported || (!biometricEnabled && !email)}
-            className="w-full bg-text-main/5 border border-text-main/10 text-text-main py-3 rounded-xl font-black text-xs uppercase tracking-widest disabled:opacity-40 flex items-center justify-center gap-2"
+            className="w-full min-h-12 bg-text-main/5 border border-text-main/10 text-text-main py-3 rounded-lg sm:rounded-xl font-black text-[11px] sm:text-xs uppercase tracking-[0.08em] sm:tracking-widest disabled:opacity-40 flex items-center justify-center gap-2"
           >
             <Fingerprint className="w-4 h-4" />
             Entrar com Biometria
@@ -146,7 +146,7 @@ export default function LandingPage({ onAuthenticated }: LandingPageProps) {
           <button
             onClick={handleEnableBiometric}
             disabled={loading || !biometricSupported || !email || !password || (isRegister && !fullName)}
-            className="w-full bg-card-bg border border-accent/40 text-accent py-3 rounded-xl font-black text-xs uppercase tracking-widest disabled:opacity-40 flex items-center justify-center gap-2"
+            className="w-full min-h-12 bg-card-bg border border-accent/40 text-accent py-3 rounded-lg sm:rounded-xl font-black text-[11px] sm:text-xs uppercase tracking-[0.08em] sm:tracking-widest disabled:opacity-40 flex items-center justify-center gap-2"
           >
             <Fingerprint className="w-4 h-4" />
             Ativar Biometria neste Dispositivo
