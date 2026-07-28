@@ -181,6 +181,80 @@ CREATE TABLE IF NOT EXISTS faturamento (
   CONSTRAINT fk_billing_user FOREIGN KEY (user_id) REFERENCES usuarios(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+CREATE TABLE IF NOT EXISTS anamneses (
+  id VARCHAR(128) NOT NULL PRIMARY KEY,
+  user_id VARCHAR(128) NOT NULL,
+  client_id VARCHAR(128) NOT NULL,
+  goal TEXT NULL,
+  medical_conditions TEXT NULL,
+  medications TEXT NULL,
+  injuries TEXT NULL,
+  experience_level ENUM('Iniciante', 'Intermediário', 'Avançado') NOT NULL DEFAULT 'Iniciante',
+  weekly_frequency INT NOT NULL DEFAULT 3,
+  sleep_hours DECIMAL(4,1) NULL,
+  stress_level INT NULL,
+  notes TEXT NULL,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  UNIQUE KEY idx_anamnese_client (user_id, client_id),
+  CONSTRAINT fk_anamnese_user_migration FOREIGN KEY (user_id) REFERENCES usuarios(id) ON DELETE CASCADE,
+  CONSTRAINT fk_anamnese_client_migration FOREIGN KEY (client_id) REFERENCES clientes(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS avaliacoes_fisicas (
+  id VARCHAR(128) NOT NULL PRIMARY KEY,
+  user_id VARCHAR(128) NOT NULL,
+  client_id VARCHAR(128) NOT NULL,
+  evaluation_date DATE NOT NULL,
+  weight DECIMAL(7,2) NULL,
+  height DECIMAL(7,2) NULL,
+  body_fat DECIMAL(5,2) NULL,
+  chest DECIMAL(7,2) NULL,
+  waist DECIMAL(7,2) NULL,
+  hip DECIMAL(7,2) NULL,
+  arm DECIMAL(7,2) NULL,
+  thigh DECIMAL(7,2) NULL,
+  resting_heart_rate INT NULL,
+  notes TEXT NULL,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT fk_evaluation_user_migration FOREIGN KEY (user_id) REFERENCES usuarios(id) ON DELETE CASCADE,
+  CONSTRAINT fk_evaluation_client_migration FOREIGN KEY (client_id) REFERENCES clientes(id) ON DELETE CASCADE,
+  KEY idx_evaluation_client_date (client_id, evaluation_date)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS pagamentos (
+  id VARCHAR(128) NOT NULL PRIMARY KEY,
+  user_id VARCHAR(128) NOT NULL,
+  client_id VARCHAR(128) NOT NULL,
+  description VARCHAR(255) NOT NULL,
+  amount DECIMAL(10,2) NOT NULL,
+  due_date DATE NOT NULL,
+  paid_at DATETIME NULL,
+  status ENUM('Pendente', 'Pago', 'Atrasado', 'Cancelado') NOT NULL DEFAULT 'Pendente',
+  payment_method ENUM('Pix', 'Dinheiro', 'Cartão', 'Boleto', 'Outro') NULL,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  CONSTRAINT fk_payment_user_migration FOREIGN KEY (user_id) REFERENCES usuarios(id) ON DELETE CASCADE,
+  CONSTRAINT fk_payment_client_migration FOREIGN KEY (client_id) REFERENCES clientes(id) ON DELETE CASCADE,
+  KEY idx_payment_user_due (user_id, due_date)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS feedbacks_treino (
+  id VARCHAR(128) NOT NULL PRIMARY KEY,
+  user_id VARCHAR(128) NOT NULL,
+  client_id VARCHAR(128) NOT NULL,
+  workout_id VARCHAR(128) NULL,
+  rating INT NOT NULL,
+  effort_level INT NULL,
+  pain_level INT NULL,
+  comment TEXT NULL,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT fk_feedback_user_migration FOREIGN KEY (user_id) REFERENCES usuarios(id) ON DELETE CASCADE,
+  CONSTRAINT fk_feedback_client_migration FOREIGN KEY (client_id) REFERENCES clientes(id) ON DELETE CASCADE,
+  CONSTRAINT fk_feedback_workout_migration FOREIGN KEY (workout_id) REFERENCES treinos(id) ON DELETE SET NULL,
+  KEY idx_feedback_user_created (user_id, created_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
 SET @seed_mjuliani25_id = COALESCE(
   (SELECT id FROM usuarios WHERE email = 'mjuliani25@gmail.com' LIMIT 1),
   '8d0a6ea6-9d1f-4c59-a4db-fdcd9647b208'

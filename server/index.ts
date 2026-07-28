@@ -848,6 +848,183 @@ app.get("/api/billing", async (req, res) => {
   res.json({ subscriptionCost: Number(row?.subscriptionCost || 99.9) });
 });
 
+app.get("/api/anamneses/:clientId", async (req, res) => {
+  const authUser = getRequestUser(req);
+  if (!authUser) return res.status(401).json({ error: "unauthorized" });
+
+  const clientId = String(req.params.clientId || "");
+  const [rows] = await pool.query(
+    `SELECT id, client_id as clientId, goal, medical_conditions as medicalConditions,
+            medications, injuries, experience_level as experienceLevel,
+            weekly_frequency as weeklyFrequency, sleep_hours as sleepHours,
+            stress_level as stressLevel, notes, updated_at as updatedAt
+     FROM anamneses WHERE user_id = ? AND client_id = ? LIMIT 1`,
+    [authUser.id, clientId]
+  );
+  const row = Array.isArray(rows) ? (rows[0] as any) : null;
+  res.json(row || null);
+});
+
+app.put("/api/anamneses/:clientId", async (req, res) => {
+  const authUser = getRequestUser(req);
+  if (!authUser) return res.status(401).json({ error: "unauthorized" });
+
+  const clientId = String(req.params.clientId || "");
+  const {
+    goal, medicalConditions, medications, injuries, experienceLevel,
+    weeklyFrequency, sleepHours, stressLevel, notes,
+  } = req.body || {};
+  const id = randomUUID();
+  await pool.query(
+    `INSERT INTO anamneses
+       (id, user_id, client_id, goal, medical_conditions, medications, injuries,
+        experience_level, weekly_frequency, sleep_hours, stress_level, notes)
+     SELECT ?, ?, c.id, ?, ?, ?, ?, ?, ?, ?, ?, ?
+     FROM clientes c WHERE c.id = ? AND c.user_id = ?
+     ON DUPLICATE KEY UPDATE
+       goal = VALUES(goal), medical_conditions = VALUES(medical_conditions),
+       medications = VALUES(medications), injuries = VALUES(injuries),
+       experience_level = VALUES(experience_level), weekly_frequency = VALUES(weekly_frequency),
+       sleep_hours = VALUES(sleep_hours), stress_level = VALUES(stress_level),
+       notes = VALUES(notes)`,
+    [
+      id, authUser.id, goal || null, medicalConditions || null, medications || null,
+      injuries || null, experienceLevel || "Iniciante", Number(weeklyFrequency || 3),
+      sleepHours || null, stressLevel || null, notes || null, clientId, authUser.id,
+    ]
+  );
+  const [rows] = await pool.query(
+    `SELECT id, client_id as clientId, goal, medical_conditions as medicalConditions,
+            medications, injuries, experience_level as experienceLevel,
+            weekly_frequency as weeklyFrequency, sleep_hours as sleepHours,
+            stress_level as stressLevel, notes, updated_at as updatedAt
+     FROM anamneses WHERE user_id = ? AND client_id = ? LIMIT 1`,
+    [authUser.id, clientId]
+  );
+  res.json(Array.isArray(rows) ? rows[0] : null);
+});
+
+app.get("/api/evaluations", async (req, res) => {
+  const authUser = getRequestUser(req);
+  if (!authUser) return res.status(401).json({ error: "unauthorized" });
+  const clientId = String(req.query.clientId || "");
+  const [rows] = await pool.query(
+    `SELECT id, client_id as clientId, evaluation_date as evaluationDate,
+            weight, height, body_fat as bodyFat, chest, waist, hip, arm, thigh,
+            resting_heart_rate as restingHeartRate, notes, created_at as createdAt
+     FROM avaliacoes_fisicas
+     WHERE user_id = ? AND (? = '' OR client_id = ?)
+     ORDER BY evaluation_date DESC`,
+    [authUser.id, clientId, clientId]
+  );
+  res.json(Array.isArray(rows) ? rows : []);
+});
+
+app.post("/api/evaluations", async (req, res) => {
+  const authUser = getRequestUser(req);
+  if (!authUser) return res.status(401).json({ error: "unauthorized" });
+  const {
+    clientId, evaluationDate, weight, height, bodyFat, chest, waist,
+    hip, arm, thigh, restingHeartRate, notes,
+  } = req.body || {};
+  if (!clientId || !evaluationDate) return res.status(400).json({ error: "clientId and evaluationDate are required" });
+  const id = randomUUID();
+  await pool.query(
+    `INSERT INTO avaliacoes_fisicas
+       (id, user_id, client_id, evaluation_date, weight, height, body_fat,
+        chest, waist, hip, arm, thigh, resting_heart_rate, notes)
+     SELECT ?, ?, c.id, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
+     FROM clientes c WHERE c.id = ? AND c.user_id = ?`,
+    [
+      id, authUser.id, evaluationDate, weight || null, height || null, bodyFat || null,
+      chest || null, waist || null, hip || null, arm || null, thigh || null,
+      restingHeartRate || null, notes || null, clientId, authUser.id,
+    ]
+  );
+  res.status(201).json({ id });
+});
+
+app.get("/api/payments", async (req, res) => {
+  const authUser = getRequestUser(req);
+  if (!authUser) return res.status(401).json({ error: "unauthorized" });
+  const [rows] = await pool.query(
+    `SELECT p.id, p.client_id as clientId, c.name as clientName, p.description,
+            p.amount, p.due_date as dueDate, p.paid_at as paidAt, p.status,
+            p.payment_method as paymentMethod, p.created_at as createdAt
+     FROM pagamentos p INNER JOIN clientes c ON c.id = p.client_id
+     WHERE p.user_id = ? ORDER BY p.due_date DESC`,
+    [authUser.id]
+  );
+  res.json(Array.isArray(rows) ? rows : []);
+});
+
+app.post("/api/payments", async (req, res) => {
+  const authUser = getRequestUser(req);
+  if (!authUser) return res.status(401).json({ error: "unauthorized" });
+  const { clientId, description, amount, dueDate, paymentMethod } = req.body || {};
+  if (!clientId || !description || !amount || !dueDate) {
+    return res.status(400).json({ error: "clientId, description, amount and dueDate are required" });
+  }
+  const id = randomUUID();
+  await pool.query(
+    `INSERT INTO pagamentos
+       (id, user_id, client_id, description, amount, due_date, status, payment_method)
+     SELECT ?, ?, c.id, ?, ?, ?, 'Pendente', ?
+     FROM clientes c WHERE c.id = ? AND c.user_id = ?`,
+    [id, authUser.id, description, Number(amount), dueDate, paymentMethod || null, clientId, authUser.id]
+  );
+  res.status(201).json({ id });
+});
+
+app.patch("/api/payments/:id/status", async (req, res) => {
+  const authUser = getRequestUser(req);
+  if (!authUser) return res.status(401).json({ error: "unauthorized" });
+  const id = String(req.params.id || "");
+  const status = String(req.body?.status || "");
+  if (!["Pendente", "Pago", "Atrasado", "Cancelado"].includes(status)) {
+    return res.status(400).json({ error: "invalid status" });
+  }
+  await pool.query(
+    `UPDATE pagamentos SET status = ?, paid_at = IF(? = 'Pago', CURRENT_TIMESTAMP, NULL)
+     WHERE id = ? AND user_id = ?`,
+    [status, status, id, authUser.id]
+  );
+  res.json({ ok: true });
+});
+
+app.get("/api/feedbacks", async (req, res) => {
+  const authUser = getRequestUser(req);
+  if (!authUser) return res.status(401).json({ error: "unauthorized" });
+  const [rows] = await pool.query(
+    `SELECT f.id, f.client_id as clientId, c.name as clientName, f.workout_id as workoutId,
+            f.rating, f.effort_level as effortLevel, f.pain_level as painLevel,
+            f.comment, f.created_at as createdAt
+     FROM feedbacks_treino f INNER JOIN clientes c ON c.id = f.client_id
+     WHERE f.user_id = ? ORDER BY f.created_at DESC LIMIT 100`,
+    [authUser.id]
+  );
+  res.json(Array.isArray(rows) ? rows : []);
+});
+
+app.post("/api/feedbacks", async (req, res) => {
+  const authUser = getRequestUser(req);
+  if (!authUser) return res.status(401).json({ error: "unauthorized" });
+  const { clientId, workoutId, rating, effortLevel, painLevel, comment } = req.body || {};
+  if (!clientId || !rating) return res.status(400).json({ error: "clientId and rating are required" });
+  const id = randomUUID();
+  await pool.query(
+    `INSERT INTO feedbacks_treino
+       (id, user_id, client_id, workout_id, rating, effort_level, pain_level, comment)
+     SELECT ?, ?, c.id, ?, ?, ?, ?, ?
+     FROM clientes c WHERE c.id = ? AND c.user_id = ?`,
+    [
+      id, authUser.id, workoutId || null, Number(rating), effortLevel || null,
+      painLevel || null, comment || null, clientId, authUser.id,
+    ]
+  );
+  res.status(201).json({ id });
+});
+
 const distPath = path.resolve(process.cwd(), "dist");
 app.use(express.static(distPath));
 app.get("*", (_req, res) => {

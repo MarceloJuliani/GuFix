@@ -26,6 +26,61 @@ export type FinishedWorkout = {
   timestamp: string | null;
 };
 
+export type Anamnesis = {
+  id?: string;
+  clientId: string;
+  goal: string;
+  medicalConditions: string;
+  medications: string;
+  injuries: string;
+  experienceLevel: 'Iniciante' | 'Intermediário' | 'Avançado';
+  weeklyFrequency: number;
+  sleepHours?: number | null;
+  stressLevel?: number | null;
+  notes: string;
+  updatedAt?: string;
+};
+
+export type PhysicalEvaluation = {
+  id: string;
+  clientId: string;
+  evaluationDate: string;
+  weight?: number | null;
+  height?: number | null;
+  bodyFat?: number | null;
+  chest?: number | null;
+  waist?: number | null;
+  hip?: number | null;
+  arm?: number | null;
+  thigh?: number | null;
+  restingHeartRate?: number | null;
+  notes?: string | null;
+};
+
+export type Payment = {
+  id: string;
+  clientId: string;
+  clientName: string;
+  description: string;
+  amount: number;
+  dueDate: string;
+  paidAt?: string | null;
+  status: 'Pendente' | 'Pago' | 'Atrasado' | 'Cancelado';
+  paymentMethod?: 'Pix' | 'Dinheiro' | 'Cartão' | 'Boleto' | 'Outro' | null;
+};
+
+export type WorkoutFeedback = {
+  id: string;
+  clientId: string;
+  clientName: string;
+  workoutId?: string | null;
+  rating: number;
+  effortLevel?: number | null;
+  painLevel?: number | null;
+  comment?: string | null;
+  createdAt: string;
+};
+
 type RequestOptions = {
   method?: string;
   body?: unknown;
@@ -190,4 +245,44 @@ export async function finishWorkout(workoutId: string, clientName?: string | nul
 
 export async function getBilling() {
   return apiFetch<BillingInfo>('/api/billing');
+}
+
+export async function getAnamnesis(clientId: string) {
+  return apiFetch<Anamnesis | null>(`/api/anamneses/${encodeURIComponent(clientId)}`);
+}
+
+export async function saveAnamnesis(clientId: string, payload: Omit<Anamnesis, 'clientId'>) {
+  return apiFetch<Anamnesis>(`/api/anamneses/${encodeURIComponent(clientId)}`, {
+    method: 'PUT',
+    body: payload,
+  });
+}
+
+export async function listEvaluations(clientId?: string) {
+  const query = clientId ? `?clientId=${encodeURIComponent(clientId)}` : '';
+  return apiFetch<PhysicalEvaluation[]>(`/api/evaluations${query}`);
+}
+
+export async function createEvaluation(payload: Omit<PhysicalEvaluation, 'id'>) {
+  return apiFetch<{ id: string }>('/api/evaluations', { method: 'POST', body: payload });
+}
+
+export async function listPayments() {
+  const data = await apiFetch<Payment[]>('/api/payments');
+  return data.map((item) => ({ ...item, amount: Number(item.amount || 0) }));
+}
+
+export async function createPayment(payload: Omit<Payment, 'id' | 'clientName' | 'status' | 'paidAt'>) {
+  return apiFetch<{ id: string }>('/api/payments', { method: 'POST', body: payload });
+}
+
+export async function updatePaymentStatus(id: string, status: Payment['status']) {
+  return apiFetch<{ ok: true }>(`/api/payments/${encodeURIComponent(id)}/status`, {
+    method: 'PATCH',
+    body: { status },
+  });
+}
+
+export async function listFeedbacks() {
+  return apiFetch<WorkoutFeedback[]>('/api/feedbacks');
 }

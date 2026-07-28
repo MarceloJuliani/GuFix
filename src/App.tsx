@@ -45,7 +45,10 @@ import {
   TrendingUp,
   ArrowDownRight,
   Coins,
-  AlertCircle
+  AlertCircle,
+  LayoutDashboard,
+  HeartPulse,
+  WalletCards
 } from 'lucide-react';
 import { 
   TrainingObjective, 
@@ -59,14 +62,15 @@ import {
 } from './types';
 import { EXERCISES as STATIC_EXERCISES, OBJECTIVES, TRAINING_TYPES } from './constants';
 import LandingPage from './components/LandingPage';
+import { AnamnesisView, CoachDashboard, EvaluationsView, FinanceView } from './components/ManagementModules';
 import { SessionUser, clearToken, getToken } from './lib/auth';
 import * as api from './lib/api';
 
-type TabId = 'sistema' | 'biblioteca' | 'metodologia' | 'perfil' | 'historico' | 'alunos' | 'assinatura' | 'treinos_feitos';
+type TabId = 'inicio' | 'sistema' | 'biblioteca' | 'metodologia' | 'perfil' | 'historico' | 'alunos' | 'assinatura' | 'treinos_feitos' | 'anamnese' | 'avaliacoes' | 'financeiro';
 
 export default function App() {
   const { t, i18n } = useTranslation();
-  const [activeTab, setActiveTab] = useState<TabId>('sistema');
+  const [activeTab, setActiveTab] = useState<TabId>('inicio');
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [showUploadForm, setShowUploadForm] = useState(false);
   const [user, setUser] = useState<{ uid: string; email?: string | null; photoURL?: string | null; displayName?: string | null } | null>(null);
@@ -176,6 +180,7 @@ export default function App() {
           displayName: currentUser.fullName || null,
         });
         setUserRole(currentUser.role || 'personal');
+        setActiveTab(currentUser.role === 'student' ? 'sistema' : 'inicio');
         setProfileFullName(currentUser.fullName || '');
         setProfileBirthDate(currentUser.birthDate || '');
         setProfileObjective(currentUser.objective || '');
@@ -188,6 +193,7 @@ export default function App() {
   const handleAuthenticated = (authUser: SessionUser) => {
     setUser({ uid: authUser.id, email: authUser.email, photoURL: null, displayName: authUser.fullName || null });
     setUserRole((authUser.role as 'personal' | 'student') || 'personal');
+    setActiveTab(authUser.role === 'student' ? 'sistema' : 'inicio');
     setProfileFullName(authUser.fullName || '');
     setAuthLoading(false);
     setShowRoleSelection(false);
@@ -764,9 +770,13 @@ export default function App() {
 
               <nav className="flex-1 space-y-2">
                 {[
-                  { icon: Dumbbell, id: 'sistema', label: 'INÍCIO', desc: 'Prescrever e Planejar', role: 'personal' },
+                  { icon: LayoutDashboard, id: 'inicio', label: 'VISÃO GERAL', desc: 'Central da Consultoria', role: 'personal' },
+                  { icon: Dumbbell, id: 'sistema', label: 'PRESCREVER', desc: 'Treinos e Planejamento', role: 'personal' },
                   { icon: UserIcon, id: 'perfil', label: t('tabs.perfil'), desc: 'Dados e Bio' },
                   { icon: Users, id: 'alunos', label: t('tabs.alunos'), desc: 'Minha Consultoria', role: 'personal' },
+                  { icon: ClipboardList, id: 'anamnese', label: 'ANAMNESE', desc: 'Saúde e Hábitos', role: 'personal' },
+                  { icon: HeartPulse, id: 'avaliacoes', label: 'AVALIAÇÕES', desc: 'Medidas e Evolução', role: 'personal' },
+                  { icon: WalletCards, id: 'financeiro', label: 'FINANCEIRO', desc: 'Receitas e Cobranças', role: 'personal' },
                   { icon: ClipboardList, id: 'treinos_feitos', label: 'TREINOS FEITOS', desc: 'Histórico por Aluno', role: 'personal' },
                   { icon: History, id: 'historico', label: t('tabs.historico'), desc: 'Sessões Salvas', role: 'student' },
                   { icon: CreditCard, id: 'assinatura', label: t('tabs.assinatura'), desc: 'Plano GJ Premium', role: 'personal' },
@@ -774,7 +784,7 @@ export default function App() {
                   <button
                     key={item.id}
                     onClick={() => {
-                      if (['perfil', 'historico', 'alunos', 'assinatura', 'treinos_feitos', 'sistema'].includes(item.id)) {
+                      if (['inicio', 'perfil', 'historico', 'alunos', 'anamnese', 'avaliacoes', 'financeiro', 'assinatura', 'treinos_feitos', 'sistema'].includes(item.id)) {
                         setActiveTab(item.id as TabId);
                         setIsMenuOpen(false);
                       }
@@ -892,7 +902,7 @@ export default function App() {
           
           <div className="flex items-center gap-4">
             <nav className="flex items-center gap-1 bg-text-main/5 p-1 rounded-lg border border-text-main/10">
-              {(userRole === 'personal' ? ['sistema', 'biblioteca', 'metodologia'] : ['sistema', 'historico']).map((tab) => (
+              {(userRole === 'personal' ? ['inicio', 'sistema', 'alunos'] : ['sistema', 'historico']).map((tab) => (
                 <button
                   key={tab}
                   onClick={() => setActiveTab(tab as TabId)}
@@ -902,7 +912,7 @@ export default function App() {
                     : 'text-text-dim hover:text-text-main hover:bg-text-main/5'
                   }`}
                 >
-                  {tab === 'sistema' && userRole === 'student' ? t('current_prescription') : t(`tabs.${tab}`)}
+                  {tab === 'inicio' ? 'Visão geral' : tab === 'sistema' && userRole === 'student' ? t('current_prescription') : tab === 'sistema' ? 'Prescrever' : t(`tabs.${tab}`)}
                 </button>
               ))}
             </nav>
@@ -965,6 +975,30 @@ export default function App() {
         </AnimatePresence>
 
         <AnimatePresence mode="wait">
+          {activeTab === 'inicio' && userRole === 'personal' && (
+            <motion.div key="inicio" initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -14 }}>
+              <CoachDashboard clients={clients} workouts={dbWorkouts} finishedCount={finishedWorkouts.length} onNavigate={(tab) => setActiveTab(tab as TabId)} />
+            </motion.div>
+          )}
+
+          {activeTab === 'anamnese' && userRole === 'personal' && (
+            <motion.div key="anamnese" initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -14 }}>
+              <AnamnesisView clients={clients} />
+            </motion.div>
+          )}
+
+          {activeTab === 'avaliacoes' && userRole === 'personal' && (
+            <motion.div key="avaliacoes" initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -14 }}>
+              <EvaluationsView clients={clients} />
+            </motion.div>
+          )}
+
+          {activeTab === 'financeiro' && userRole === 'personal' && (
+            <motion.div key="financeiro" initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -14 }}>
+              <FinanceView clients={clients} />
+            </motion.div>
+          )}
+
           {activeTab === 'treinos_feitos' && (
             <motion.div
               key="treinos_feitos"
@@ -2855,6 +2889,29 @@ export default function App() {
         </AnimatePresence>
       </main>
 
+      <nav className="fixed bottom-3 left-3 right-3 z-50 grid grid-cols-5 rounded-[1.4rem] border border-text-main/10 bg-card-bg/95 p-2 shadow-2xl backdrop-blur-xl md:hidden">
+        {(userRole === 'personal' ? [
+          { id: 'inicio', icon: LayoutDashboard, label: 'Início' },
+          { id: 'sistema', icon: Dumbbell, label: 'Treino' },
+          { id: 'alunos', icon: Users, label: 'Alunos' },
+          { id: 'avaliacoes', icon: HeartPulse, label: 'Evolução' },
+          { id: 'financeiro', icon: WalletCards, label: 'Financeiro' },
+        ] : [
+          { id: 'sistema', icon: Dumbbell, label: 'Treino' },
+          { id: 'historico', icon: History, label: 'Histórico' },
+          { id: 'perfil', icon: UserIcon, label: 'Perfil' },
+        ]).map((item) => (
+          <button
+            key={item.id}
+            onClick={() => setActiveTab(item.id as TabId)}
+            className={`flex min-w-0 flex-col items-center gap-1 rounded-xl px-1 py-2 text-[8px] font-black uppercase transition ${activeTab === item.id ? 'bg-accent text-page-bg' : 'text-text-dim'}`}
+          >
+            <item.icon className="h-4 w-4" />
+            <span className="max-w-full truncate">{item.label}</span>
+          </button>
+        ))}
+      </nav>
+
       {/* Removed lower Save Success Feedback since it's now at the top */}
 
       {/* Footer Info */}
@@ -3030,7 +3087,7 @@ export default function App() {
       </AnimatePresence>
 
       {/* Floating Badge for Method */}
-      <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-30 no-print">
+      <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-30 no-print hidden md:block">
         <div className="bg-card-bg/80 backdrop-blur-xl text-text-main px-6 py-3 rounded-full shadow-2xl flex items-center gap-4 border border-text-main/10 hover:border-accent/40 transition-all cursor-default">
            <Zap className="w-4 h-4 text-accent animate-pulse" />
            <span className="text-[10px] font-black uppercase tracking-[0.2em] italic">Status: <span className="text-accent">Live Prescription</span></span>

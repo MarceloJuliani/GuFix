@@ -54,6 +54,7 @@
     @apply antialiased bg-page-bg text-text-main transition-colors duration-300;
     min-width: 0;
     overflow-x: hidden;
+    padding-bottom: env(safe-area-inset-bottom);
   }
 
   *,
@@ -130,6 +131,10 @@
 @media (max-width: 767px) {
   header nav {
     display: none !important;
+  }
+
+  body {
+    padding-bottom: calc(5.5rem + env(safe-area-inset-bottom));
   }
 }
 
