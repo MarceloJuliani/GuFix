@@ -243,7 +243,7 @@ async function fetchWorkouts(whereSql: string, params: any[]) {
 app.get("/api/health", async (_req, res) => {
   try {
     await pool.query("SELECT 1");
-    res.json({ ok: true });
+    res.json({ ok: true, schemaVersion: "2026-07-28-management" });
   } catch (error) {
     res.status(500).json({ ok: false, error: String(error) });
   }
