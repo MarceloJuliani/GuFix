@@ -5,6 +5,7 @@ import mysql from "mysql2/promise";
 import path from "path";
 import { randomUUID } from "crypto";
 import bcrypt from "bcryptjs";
+import { ensureDatabaseSchema } from "./schema.js";
 import {
   generateRegistrationOptions,
   verifyRegistrationResponse,
@@ -1037,6 +1038,14 @@ app.get("*", (_req, res) => {
   res.sendFile(path.join(distPath, "index.html"));
 });
 
-app.listen(PORT, () => {
-  console.log(`GuFix API running on port ${PORT}`);
+async function startServer() {
+  await ensureDatabaseSchema(pool);
+  app.listen(PORT, () => {
+    console.log(`GuFix API running on port ${PORT}`);
+  });
+}
+
+startServer().catch((error) => {
+  console.error("GuFix database migration failed:", error);
+  process.exitCode = 1;
 });
