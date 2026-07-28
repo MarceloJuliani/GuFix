@@ -23,11 +23,17 @@ const MYSQL_USER = process.env.MYSQL_USER || process.env.DB_USER;
 const MYSQL_PASSWORD = process.env.MYSQL_PASSWORD || process.env.DB_PASSWORD;
 const MYSQL_DATABASE = process.env.MYSQL_DATABASE || process.env.DB_NAME || "gufix_app";
 const AUTH_SECRET = process.env.AUTH_SECRET || "gufix-local-secret";
+const ADMIN_EMAILS = new Set(["mjuliani25@gmail.com"]);
 const RP_NAME = process.env.WEBAUTHN_RP_NAME || "GuFix";
 const RP_ID = process.env.WEBAUTHN_RP_ID || "localhost";
 const RP_ORIGIN = process.env.WEBAUTHN_RP_ORIGIN || "http://localhost:3000";
 const registrationChallenges = new Map<string, string>();
 const authenticationChallenges = new Map<string, string>();
+
+function resolveRole(email: unknown, role: unknown): AuthUser["role"] {
+  if (ADMIN_EMAILS.has(String(email || "").trim().toLowerCase())) return "admin";
+  return role === "student" ? "student" : role === "personal" ? "personal" : null;
+}
 
 function toBase64Url(input: Uint8Array | Buffer) {
   return Buffer.from(input)
@@ -47,7 +53,7 @@ type AuthUser = {
   id: string;
   email: string;
   fullName: string | null;
-  role: "personal" | "student" | null;
+  role: "admin" | "personal" | "student" | null;
 };
 
 function signToken(payload: AuthUser) {
@@ -114,7 +120,7 @@ function mapUser(row: any) {
     fullName: row.fullName || null,
     birthDate: toDateOnly(row.birthDate),
     objective: row.objective || null,
-    role: row.role || null,
+    role: resolveRole(row.email, row.role),
     lastWorkoutType: row.lastWorkoutType || null,
   };
 }
@@ -405,7 +411,7 @@ app.post("/api/auth/biometric/login/verify", async (req, res) => {
     id: row.id,
     email: row.email,
     fullName: row.fullName || null,
-    role: row.role || null,
+    role: resolveRole(row.email, row.role),
   };
 
   const token = signToken(user);
@@ -458,7 +464,7 @@ app.post("/api/auth/login", async (req, res) => {
     id: row.id,
     email: row.email,
     fullName: row.fullName || null,
-    role: row.role || null,
+    role: resolveRole(row.email, row.role),
   };
   const token = signToken(user);
   res.json({ token, user });
@@ -491,7 +497,7 @@ app.patch("/api/users/me", async (req, res) => {
       birthDate !== undefined ? birthDate || null : toDateOnly(current.birthDate),
       objective !== undefined ? objective || null : current.objective || null,
       email !== undefined ? email || null : current.email || null,
-      role !== undefined ? role || null : current.role || null,
+      resolveRole(current.email, role !== undefined ? role : current.role),
       lastWorkoutType !== undefined ? lastWorkoutType || null : current.lastWorkoutType || null,
       authUser.id,
     ]

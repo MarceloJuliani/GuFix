@@ -5,7 +5,7 @@ export type SessionUser = {
   id: string;
   email: string;
   fullName?: string | null;
-  role?: 'personal' | 'student' | null;
+  role?: 'admin' | 'personal' | 'student' | null;
 };
 
 const TOKEN_KEY = 'gufix_token';

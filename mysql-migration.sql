@@ -8,7 +8,7 @@ CREATE TABLE IF NOT EXISTS usuarios (
   birth_date DATE NULL,
   objective VARCHAR(80) NULL,
   email VARCHAR(255) NULL,
-  role ENUM('personal', 'student') NULL,
+  role ENUM('admin', 'personal', 'student') NULL,
   password_hash VARCHAR(255) NULL,
   last_workout_type VARCHAR(80) NULL,
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -131,7 +131,7 @@ CALL add_column_if_missing('usuarios', 'full_name', 'full_name VARCHAR(255) NULL
 CALL add_column_if_missing('usuarios', 'birth_date', 'birth_date DATE NULL');
 CALL add_column_if_missing('usuarios', 'objective', 'objective VARCHAR(80) NULL');
 CALL add_column_if_missing('usuarios', 'email', 'email VARCHAR(255) NULL');
-CALL add_column_if_missing('usuarios', 'role', 'role ENUM(''personal'', ''student'') NULL');
+CALL add_column_if_missing('usuarios', 'role', 'role ENUM(''admin'', ''personal'', ''student'') NULL');
 CALL add_column_if_missing('usuarios', 'password_hash', 'password_hash VARCHAR(255) NULL');
 CALL add_column_if_missing('usuarios', 'last_workout_type', 'last_workout_type VARCHAR(80) NULL');
 CALL add_index_if_missing('usuarios', 'idx_usuarios_email', 'UNIQUE KEY idx_usuarios_email (email)');
@@ -255,6 +255,8 @@ CREATE TABLE IF NOT EXISTS feedbacks_treino (
   KEY idx_feedback_user_created (user_id, created_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+ALTER TABLE usuarios MODIFY COLUMN role ENUM('admin', 'personal', 'student') NULL;
+
 SET @seed_mjuliani25_id = COALESCE(
   (SELECT id FROM usuarios WHERE email = 'mjuliani25@gmail.com' LIMIT 1),
   '8d0a6ea6-9d1f-4c59-a4db-fdcd9647b208'
@@ -265,8 +267,8 @@ VALUES (
   @seed_mjuliani25_id,
   'Marcelo Juliani',
   'mjuliani25@gmail.com',
-  'personal',
-  '$2b$10$hctZFB.fdEazSxMKOeLEHuydzJRkGWNJdTHYqKT1GyMLFru9/Zfem'
+  'admin',
+  '$2b$10$6SgcPpMiEB7BaPau9dfhT.87Krn3EsiiGph.ie6WVRSb/BRa7a.x.'
 )
 ON DUPLICATE KEY UPDATE
   full_name = VALUES(full_name),

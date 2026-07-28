@@ -14,7 +14,7 @@ CREATE TABLE IF NOT EXISTS usuarios (
   birth_date DATE NULL,
   objective VARCHAR(80) NULL,
   email VARCHAR(255) NULL,
-  role ENUM('personal', 'student') NULL,
+  role ENUM('admin', 'personal', 'student') NULL,
   password_hash VARCHAR(255) NULL,
   last_workout_type VARCHAR(80) NULL,
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -33,8 +33,8 @@ VALUES (
   @seed_mjuliani25_id,
   'Marcelo Juliani',
   'mjuliani25@gmail.com',
-  'personal',
-  '$2b$10$hctZFB.fdEazSxMKOeLEHuydzJRkGWNJdTHYqKT1GyMLFru9/Zfem'
+  'admin',
+  '$2b$10$6SgcPpMiEB7BaPau9dfhT.87Krn3EsiiGph.ie6WVRSb/BRa7a.x.'
 )
 ON DUPLICATE KEY UPDATE
   full_name = VALUES(full_name),

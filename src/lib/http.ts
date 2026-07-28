@@ -1,4 +1,8 @@
-const API_BASE_URL = String(import.meta.env.VITE_API_BASE_URL || '').replace(/\/+$/, '');
+import { Capacitor } from '@capacitor/core';
+
+const NATIVE_API_URL = 'https://app.gufix.com.br';
+const configuredApiUrl = String(import.meta.env.VITE_API_BASE_URL || '').replace(/\/+$/, '');
+const API_BASE_URL = configuredApiUrl || (Capacitor.isNativePlatform() ? NATIVE_API_URL : '');
 
 export function apiUrl(path: string) {
   const normalizedPath = path.startsWith('/') ? path : `/${path}`;

@@ -179,7 +179,7 @@ export default function App() {
           photoURL: null,
           displayName: currentUser.fullName || null,
         });
-        setUserRole(currentUser.role || 'personal');
+        setUserRole(currentUser.role === 'student' ? 'student' : 'personal');
         setActiveTab(currentUser.role === 'student' ? 'sistema' : 'inicio');
         setProfileFullName(currentUser.fullName || '');
         setProfileBirthDate(currentUser.birthDate || '');
@@ -192,7 +192,7 @@ export default function App() {
 
   const handleAuthenticated = (authUser: SessionUser) => {
     setUser({ uid: authUser.id, email: authUser.email, photoURL: null, displayName: authUser.fullName || null });
-    setUserRole((authUser.role as 'personal' | 'student') || 'personal');
+    setUserRole(authUser.role === 'student' ? 'student' : 'personal');
     setActiveTab(authUser.role === 'student' ? 'sistema' : 'inicio');
     setProfileFullName(authUser.fullName || '');
     setAuthLoading(false);

@@ -8,7 +8,7 @@ export type CurrentUser = {
   fullName?: string | null;
   birthDate?: string | null;
   objective?: string | null;
-  role?: 'personal' | 'student' | null;
+  role?: 'admin' | 'personal' | 'student' | null;
   lastWorkoutType?: TrainingType | null;
 };
 
