@@ -35,7 +35,7 @@ npm run android:bundle
 Arquivo gerado:
 
 ```text
-android/app/build/outputs/bundle/release/app-release.aab
+Mobile/android/app/build/outputs/bundle/release/app-release.aab
 ```
 
 Esse é o arquivo que deve ser enviado para o Google Play Console.

@@ -46,8 +46,8 @@ function New-GuFixAsset {
 }
 
 $iconPaths = @(
-    'ios/App/App/Assets.xcassets/AppIcon.appiconset/AppIcon-512@2x.png'
-) + @(Get-ChildItem 'android/app/src/main/res' -Recurse -Filter 'ic_launcher*.png' | ForEach-Object FullName)
+    'Mobile/ios/App/App/Assets.xcassets/AppIcon.appiconset/AppIcon-512@2x.png'
+) + @(Get-ChildItem 'Mobile/android/app/src/main/res' -Recurse -Filter 'ic_launcher*.png' | ForEach-Object FullName)
 
 foreach ($path in $iconPaths) {
     $resolved = if ([System.IO.Path]::IsPathRooted($path)) { $path } else { Join-Path $PSScriptRoot '..' $path }
@@ -59,8 +59,8 @@ foreach ($path in $iconPaths) {
 }
 
 $splashPaths = @(
-    Get-ChildItem 'android/app/src/main/res' -Recurse -Filter 'splash.png'
-    Get-ChildItem 'ios/App/App/Assets.xcassets/Splash.imageset' -Filter '*.png'
+    Get-ChildItem 'Mobile/android/app/src/main/res' -Recurse -Filter 'splash.png'
+    Get-ChildItem 'Mobile/ios/App/App/Assets.xcassets/Splash.imageset' -Filter '*.png'
 )
 
 foreach ($file in $splashPaths) {

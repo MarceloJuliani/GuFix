@@ -12,9 +12,9 @@ npm run native:sync
 ## Android / Google Play
 
 1. Instale Android Studio e JDK 21.
-2. Configure `android/keystore.properties` usando o arquivo de exemplo.
+2. Configure `Mobile/android/keystore.properties` usando o arquivo de exemplo.
 3. Execute `npm run android:bundle`.
-4. Envie o `.aab` gerado em `android/app/build/outputs/bundle/release/` para o Google Play Console.
+4. Envie o `.aab` gerado em `Mobile/android/app/build/outputs/bundle/release/` para o Google Play Console.
 
 ## iOS / App Store
 
@@ -31,7 +31,7 @@ A compilação e a assinatura iOS exigem um Mac com Xcode e uma conta Apple Deve
 
 ## Versões de loja
 
-- Android: ajuste `versionCode` e `versionName` em `android/app/build.gradle`.
+- Android: ajuste `versionCode` e `versionName` em `Mobile/android/app/build.gradle`.
 - iOS: ajuste `Version` e `Build` no target **App**, dentro do Xcode.
 
 Antes de cada publicação, execute `npm run native:sync` para copiar a versão web mais recente para Android e iOS.

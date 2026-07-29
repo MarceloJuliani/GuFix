@@ -176,7 +176,7 @@ export default function LandingPage({ onAuthenticated }: LandingPageProps) {
                 <span className="max-sm:block">Mais </span><span>resultado.</span><br /><span className="text-[#b9ff3f]">Menos improviso.</span>
               </h1>
               <p className="mt-8 max-w-xl text-base font-medium leading-relaxed text-white/70 md:text-xl">
-                Marcelo Juliani e GuFix conectam prescrição, acompanhamento e evolução em uma experiência completa para personal e aluno.
+                O GuFix conecta prescrição, acompanhamento e evolução em uma experiência completa para personal e aluno.
               </p>
               <div className="mt-9 flex flex-col gap-3 sm:flex-row">
                 <button onClick={() => openAuth(true)} className="group flex min-h-14 items-center justify-center gap-3 rounded-full bg-[#b9ff3f] px-7 text-xs font-black uppercase tracking-[0.14em] text-[#071d2d] transition hover:-translate-y-1">
@@ -243,7 +243,7 @@ export default function LandingPage({ onAuthenticated }: LandingPageProps) {
             <motion.div {...reveal} className="relative min-h-[32rem] overflow-hidden rounded-[2.5rem] bg-[#5b36f2] p-7 md:p-10">
               <div className="absolute -bottom-20 -right-20 h-80 w-80 rounded-full border-[70px] border-[#b9ff3f]/25" />
               <div className="relative flex h-full min-h-[27rem] flex-col justify-between">
-                <div className="flex items-center justify-between"><span className="rounded-full border border-white/25 px-4 py-2 text-[9px] font-black uppercase tracking-[0.18em]">Marcelo Juliani</span><Target className="h-9 w-9 text-[#b9ff3f]" /></div>
+                <div className="flex items-center justify-between"><span className="rounded-full border border-white/25 px-4 py-2 text-[9px] font-black uppercase tracking-[0.18em]">Método GuFix</span><Target className="h-9 w-9 text-[#b9ff3f]" /></div>
                 <div><p className="text-sm font-black uppercase tracking-[0.16em] text-[#b9ff3f]">Acompanhamento humano</p><p className="mt-4 text-[clamp(2.5rem,5vw,4.6rem)] font-black uppercase italic leading-[.9] tracking-[-.06em]">Estratégia antes de intensidade.</p></div>
               </div>
             </motion.div>
@@ -254,7 +254,7 @@ export default function LandingPage({ onAuthenticated }: LandingPageProps) {
               <div className="mt-9 space-y-4">
                 {['Treino adaptado ao momento de cada aluno', 'Avaliação e progresso reunidos no mesmo histórico', 'Comunicação direta entre personal e aluno'].map((item) => <div key={item} className="flex items-center gap-4 border-b border-white/10 pb-4"><span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-[#b9ff3f] text-[#092a40]"><Check className="h-4 w-4" /></span><p className="text-sm font-bold">{item}</p></div>)}
               </div>
-              <a href="mailto:mjuliani25@gmail.com" className="mt-9 inline-flex items-center gap-3 rounded-full bg-white px-7 py-4 text-xs font-black uppercase tracking-widest text-[#092a40]">Falar com Marcelo <ArrowRight className="h-4 w-4" /></a>
+              <button onClick={() => openAuth(true)} className="mt-9 inline-flex items-center gap-3 rounded-full bg-white px-7 py-4 text-xs font-black uppercase tracking-widest text-[#092a40]">Começar no GuFix <ArrowRight className="h-4 w-4" /></button>
             </motion.div>
           </div>
         </section>
@@ -296,11 +296,11 @@ export default function LandingPage({ onAuthenticated }: LandingPageProps) {
 
       <footer className="bg-[#06131d] text-white">
         <div className="mx-auto grid max-w-[82rem] gap-10 px-5 py-14 md:grid-cols-[1.2fr_.8fr_.8fr] lg:px-8">
-          <div><div className="flex items-center gap-3"><span className="grid h-10 w-10 place-items-center rounded-xl bg-[#b9ff3f] text-[#092a40]"><Dumbbell className="h-5 w-5" /></span><span className="text-2xl font-black italic tracking-[-.08em]">GU<span className="text-[#b9ff3f]">FIX</span></span></div><p className="mt-5 max-w-sm text-sm font-medium leading-relaxed text-white/50">Consultoria, prescrição e gestão fitness conectadas por Marcelo Juliani.</p></div>
+          <div><div className="flex items-center gap-3"><span className="grid h-10 w-10 place-items-center rounded-xl bg-[#b9ff3f] text-[#092a40]"><Dumbbell className="h-5 w-5" /></span><span className="text-2xl font-black italic tracking-[-.08em]">GU<span className="text-[#b9ff3f]">FIX</span></span></div><p className="mt-5 max-w-sm text-sm font-medium leading-relaxed text-white/50">Prescrição, evolução e gestão fitness conectadas em uma única plataforma.</p></div>
           <div><p className="text-[10px] font-black uppercase tracking-widest text-[#b9ff3f]">Navegação</p><div className="mt-5 space-y-3 text-sm font-bold text-white/65"><a className="block hover:text-white" href="#recursos">Recursos</a><a className="block hover:text-white" href="#personal">Personal</a><a className="block hover:text-white" href="#aplicativo">Aplicativo</a></div></div>
-          <div><p className="text-[10px] font-black uppercase tracking-widest text-[#b9ff3f]">Contato</p><a href="mailto:mjuliani25@gmail.com" className="mt-5 block break-all text-sm font-bold text-white/65 hover:text-white">mjuliani25@gmail.com</a><button onClick={() => openAuth(false)} className="mt-5 text-xs font-black uppercase tracking-widest text-white">Acessar sistema →</button></div>
+          <div><p className="text-[10px] font-black uppercase tracking-widest text-[#b9ff3f]">Plataforma</p><p className="mt-5 text-sm font-bold text-white/65">Web, Android e iOS</p><button onClick={() => openAuth(false)} className="mt-5 text-xs font-black uppercase tracking-widest text-white">Acessar sistema →</button></div>
         </div>
-        <div className="border-t border-white/10 px-5 py-6 text-center text-[9px] font-black uppercase tracking-[.15em] text-white/30">© {new Date().getFullYear()} GuFix · Marcelo Juliani</div>
+        <div className="border-t border-white/10 px-5 py-6 text-center text-[9px] font-black uppercase tracking-[.15em] text-white/30">© {new Date().getFullYear()} GuFix · Performance e gestão</div>
       </footer>
 
       <AnimatePresence>
