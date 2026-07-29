@@ -5,7 +5,11 @@ const config: CapacitorConfig = {
   appName: 'GuFix',
   webDir: 'dist',
   android: {
-    backgroundColor: '#0a0a0a',
+    backgroundColor: '#06131d',
+  },
+  ios: {
+    backgroundColor: '#06131d',
+    contentInset: 'automatic',
   },
   server: {
     androidScheme: 'https',

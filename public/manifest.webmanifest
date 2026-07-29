@@ -4,8 +4,8 @@
   "description": "Gestão completa para personal trainers e alunos.",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#0a0a0a",
-  "theme_color": "#d000ff",
+  "background_color": "#06131d",
+  "theme_color": "#092a40",
   "orientation": "portrait-primary",
   "icons": [
     {

@@ -158,10 +158,11 @@ export default function App() {
   const [selectedStudentIdInTreinosFeitos, setSelectedStudentIdInTreinosFeitos] = useState<string>('');
   const [clientStatusFilter, setClientStatusFilter] = useState<'Todos' | 'Ativo' | 'Inativo'>('Todos');
   const [showSaveSuccess, setShowSaveSuccess] = useState(false);
+  const [apiError, setApiError] = useState('');
 
   const handleApiError = (error: unknown, context: string) => {
     console.error(`API Error (${context}):`, error);
-    alert(error instanceof Error ? error.message : 'Erro ao acessar o banco de dados.');
+    setApiError(error instanceof Error ? error.message : 'Erro ao acessar o banco de dados.');
   };
 
   useEffect(() => {
@@ -861,7 +862,7 @@ export default function App() {
 
       {/* Header */}
       <header className="bg-page-bg/80 backdrop-blur-md border-b border-text-main/10 sticky top-0 z-20">
-        <div className="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
+        <div className="max-w-[82rem] mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="flex items-center gap-1 bg-text-main/5 p-0.5 rounded-lg border border-text-main/10 mr-2">
               {[
@@ -956,11 +957,44 @@ export default function App() {
               )}
           </div>
         </div>
+        {userRole === 'personal' && (
+          <nav className="max-w-[82rem] mx-auto flex items-center gap-2 overflow-x-auto px-4 pb-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            {[
+              { id: 'inicio', label: 'Visão geral', icon: LayoutDashboard },
+              { id: 'sistema', label: 'Prescrever', icon: Dumbbell },
+              { id: 'alunos', label: 'Alunos', icon: Users },
+              { id: 'anamnese', label: 'Anamnese', icon: ClipboardList },
+              { id: 'avaliacoes', label: 'Avaliações', icon: HeartPulse },
+              { id: 'financeiro', label: 'Financeiro', icon: WalletCards },
+              { id: 'treinos_feitos', label: 'Treinos feitos', icon: CheckCircle2 },
+            ].map((item) => (
+              <button
+                key={item.id}
+                onClick={() => setActiveTab(item.id as TabId)}
+                className={`flex shrink-0 items-center gap-2 rounded-full border px-4 py-2 text-[9px] font-black uppercase tracking-[0.12em] transition ${activeTab === item.id ? 'border-accent bg-accent text-page-bg' : 'border-text-main/10 bg-card-bg/40 text-text-dim hover:border-accent/40 hover:text-text-main'}`}
+              >
+                <item.icon className="h-3.5 w-3.5" />{item.label}
+              </button>
+            ))}
+          </nav>
+        )}
       </header>
 
-      <main className="max-w-6xl mx-auto px-4 py-8">
+      <main className="max-w-[82rem] mx-auto px-4 py-8">
         {/* Save Success Feedback */}
         <AnimatePresence>
+          {apiError && (
+            <motion.div
+              initial={{ opacity: 0, y: -30, scale: 0.96 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: -20, scale: 0.96 }}
+              className="fixed left-3 right-3 top-24 z-[310] mx-auto flex max-w-xl items-start gap-3 rounded-2xl border border-red-500/30 bg-card-bg p-4 shadow-2xl md:left-1/2 md:right-auto md:-translate-x-1/2"
+            >
+              <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-red-500" />
+              <div className="min-w-0 flex-1"><p className="text-[9px] font-black uppercase tracking-widest text-red-500">Não foi possível carregar</p><p className="mt-1 break-words text-xs font-bold text-text-main">{apiError}</p></div>
+              <button onClick={() => setApiError('')} className="rounded-lg p-1 text-text-dim hover:bg-text-main/5 hover:text-text-main" aria-label="Fechar aviso"><X className="h-4 w-4" /></button>
+            </motion.div>
+          )}
           {showSaveSuccess && (
             <motion.div
               initial={{ opacity: 0, y: -50, scale: 0.9 }}

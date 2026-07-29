@@ -13,6 +13,9 @@
     "android:sync": "npm run build:web && cap sync android",
     "android:open": "cap open android",
     "android:bundle": "npm run android:sync && cd android && gradlew.bat bundleRelease",
+    "ios:sync": "npm run build:web && cap sync ios",
+    "ios:open": "cap open ios",
+    "native:sync": "npm run build:web && cap sync android && cap sync ios",
     "preview": "vite preview --host 0.0.0.0 --port 3000",
     "start": "node dist-server/index.mjs",
     "clean": "node -e \"try{require('fs').rmSync('dist',{recursive:true,force:true})}catch(e){}\"",
@@ -24,6 +27,7 @@
   "dependencies": {
     "@capacitor/android": "^8.4.2",
     "@capacitor/core": "^8.4.2",
+    "@capacitor/ios": "^8.4.2",
     "@simplewebauthn/browser": "^13.1.2",
     "@simplewebauthn/server": "^13.3.1",
     "@tailwindcss/vite": "^4.1.14",
